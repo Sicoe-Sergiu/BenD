@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("kotlin-kapt")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -76,5 +77,14 @@ dependencies {
     kapt ("androidx.room:room-compiler:2.6.0")
 //    ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+//    NavController
+    implementation ("androidx.navigation:navigation-compose:2.7.5")
+
+//    Firebase
+    implementation(platform("com.google.firebase:firebase-bom:32.5.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.gms:google-services:4.4.0")
+
 
 }

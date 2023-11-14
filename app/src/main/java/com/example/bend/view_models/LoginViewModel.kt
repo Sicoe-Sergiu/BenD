@@ -1,64 +1,51 @@
 package com.example.bend.view_models
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.example.bend.UIEvent
+import androidx.navigation.NavController
+import com.example.bend.events.LoginUIEvent
+import com.example.bend.events.RegistrationUIEvent
+import com.example.bend.ui_state.LoginUiState
 import com.example.bend.ui_state.RegistrationUiState
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel: ViewModel() {
     private val TAG = LoginViewModel::class.simpleName
-    var registration_ui_state = mutableStateOf(RegistrationUiState())
+    var login_ui_state = mutableStateOf(LoginUiState())
+    var all_validations_passed = mutableStateOf(false)
 
-    fun onEvent(event: UIEvent){
-        when(event){
-            is UIEvent.FirstNameChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(first_name = event.first_name)
-                printState()
-            }
-            is UIEvent.LastNameChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(last_name = event.last_name)
-                printState()
-            }
-            is UIEvent.UsernameChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(username = event.username)
-                printState()
-            }
-            is UIEvent.EmailChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(email = event.email)
-                printState()
-            }
-            is UIEvent.PasswordChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(password = event.password)
-                printState()
-            }
-            is UIEvent.AccountTypeChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(account_type = event.account_type)
+    var sign_in_in_progress = mutableStateOf(false)
+
+    lateinit var navController: NavController
+
+    fun onEvent(event: LoginUIEvent) {
+        validateDataWithRules()
+        when (event) {
+            is LoginUIEvent.EmailChanged -> {
+                login_ui_state.value = login_ui_state.value.copy(email = event.email)
                 printState()
             }
 
-//            conditionals
-            is UIEvent.PhoneChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(phone = event.phone)
-                printState()
-            }
-            is UIEvent.StageNameChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(stage_name = event.stage_name)
+            is LoginUIEvent.PasswordChanged -> {
+                login_ui_state.value = login_ui_state.value.copy(password = event.password)
                 printState()
             }
 
-            UIEvent.RegisterButtonClicked -> {
-                signUp()
+            is LoginUIEvent.LoginButtonClicked -> {
+                navController = event.navController
+                signIn(navController)
             }
         }
     }
-
-    private fun signUp(){
-        Log.d(TAG,"Inside_signUp")
-        printState()
-    }
-    private fun printState(){
-        Log.d(TAG,"Inside_printState")
-        Log.d(TAG,registration_ui_state.toString())
-    }
 }
+
+    private fun printState() {
+        TODO("Not yet implemented")
+    }
+
+    private fun signIn(navController: NavController) {
+        TODO("Not yet implemented")
+    }
+
+    private fun validateDataWithRules() {
+        TODO("Not yet implemented")
+    }

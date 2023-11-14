@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "582577229966",
+    "project_id": "bend-c82c1",
+    "storage_bucket": "bend-c82c1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:582577229966:android:d36db3425e59d0b6ceb9df",
+        "android_client_info": {
+          "package_name": "com.example.bend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAv49jBB-OSnrqC2wT5Fjn2GMhIWc033uM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
