@@ -46,6 +46,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
 }
 
 dependencies {
@@ -84,7 +85,13 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.5.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.gms:google-services:4.4.0")
+    implementation("com.google.firebase:firebase-firestore-ktx:24.10.0")
+//    grid
+    implementation ("androidx.compose.foundation:foundation:1.2.0")
+
+
+
+
 
 
 }

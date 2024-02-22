@@ -13,12 +13,12 @@ data class RegistrationUiState(
     var stage_name:String = "",
 //
 
-    var first_name_error: Boolean = false,
-    var last_name_error: Boolean = false,
-    var username_error: Boolean = false,
-    var password_error: Boolean = false,
-    var email_error: Boolean = false,
+    var first_name_error: Boolean = true,
+    var last_name_error: Boolean = true,
+    var username_error: Boolean = true,
+    var password_error: Boolean = true,
+    var email_error: Boolean = true,
 //
-    var phone_error: Boolean = false,
-    var stage_name_error: Boolean = false,
+    var phone_error: Boolean = true,
+    var stage_name_error: Boolean = true,
 )

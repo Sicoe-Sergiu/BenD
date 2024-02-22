@@ -8,38 +8,52 @@ import com.example.bend.Constants
 import com.example.bend.events.RegistrationUIEvent
 import com.example.bend.register_login.Validator
 import com.example.bend.ui_state.RegistrationUiState
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener
+import com.google.firebase.firestore.FirebaseFirestore
 
 class RegisterViewModel : ViewModel() {
     private val TAG = RegisterViewModel::class.simpleName
     var registration_ui_state = mutableStateOf(RegistrationUiState())
-    var all_validations_passed = mutableStateOf(false)
+
+    var first_name_validations_passed = mutableStateOf(false)
+    var last_name_validations_passed = mutableStateOf(false)
+    var username_validations_passed = mutableStateOf(false)
+    var email_validations_passed = mutableStateOf(false)
+    var password_validations_passed = mutableStateOf(false)
+    var phone_validations_passed = mutableStateOf(false)
+    var stage_name_validations_passed = mutableStateOf(false)
 
     var sign_up_in_progress = mutableStateOf(false)
 
     lateinit var navController:NavController
     fun onEvent(event: RegistrationUIEvent){
-        validateDataWithRules()
+
         when(event){
             is RegistrationUIEvent.FirstNameChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(first_name = event.first_name)
+                validateFirstNameDataWithRules()
                 printState()
             }
             is RegistrationUIEvent.LastNameChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(last_name = event.last_name)
+                validateLastNameDataWithRules()
                 printState()
             }
             is RegistrationUIEvent.UsernameChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(username = event.username)
+                validateUsernameDataWithRules()
                 printState()
             }
             is RegistrationUIEvent.EmailChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(email = event.email)
+                validateEmailDataWithRules()
                 printState()
             }
             is RegistrationUIEvent.PasswordChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(password = event.password)
+                validatePasswordDataWithRules()
                 printState()
             }
             is RegistrationUIEvent.AccountTypeChanged -> {
@@ -50,22 +64,45 @@ class RegisterViewModel : ViewModel() {
 //            conditionals
             is RegistrationUIEvent.PhoneChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(phone = event.phone)
+                validatePhoneDataWithRules()
                 printState()
             }
             is RegistrationUIEvent.StageNameChanged -> {
                 registration_ui_state.value = registration_ui_state.value.copy(stage_name = event.stage_name)
+                validateStageNameDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.RegisterButtonClicked -> {
+                validateFirstNameDataWithRules()
+                validateLastNameDataWithRules()
+                validateUsernameDataWithRules()
+                validateEmailDataWithRules()
+                validatePasswordDataWithRules()
+                validatePhoneDataWithRules()
+                validateStageNameDataWithRules()
+                
                 navController = event.navController
-                signUp(navController)
+                if(first_name_validations_passed.value &&
+                    last_name_validations_passed.value &&
+                    username_validations_passed.value &&
+                    email_validations_passed.value &&
+                    password_validations_passed.value &&
+                    (
+                            (registration_ui_state.value.account_type == "Event Organizer account" && phone_validations_passed.value) ||
+                                    (registration_ui_state.value.account_type == "Artist account" && stage_name_validations_passed.value) ||
+                                    registration_ui_state.value.account_type == "Regular Account"
+                            )
+                    )
+                    signUp(navController)
             }
 
             is RegistrationUIEvent.LogOutButtonClicked -> {
                 navController = event.navController
                 logOutUser(navController)
             }
+
+            else -> {}
         }
     }
 
@@ -74,80 +111,170 @@ class RegisterViewModel : ViewModel() {
         printState()
         createUserInFirebase(
             navController = navController,
-            email = registration_ui_state.value.email,
-            password = registration_ui_state.value.password
+            registration_ui_state = registration_ui_state.value
         )
     }
-
-    private fun validateDataWithRules() {
-        val first_name_result = Validator.validateFirstName(
+    private fun validateFirstNameDataWithRules(){
+        val result = Validator.validateFirstName(
             first_name = registration_ui_state.value.first_name
         )
-        val last_name_result = Validator.validateLastName(
+        registration_ui_state.value = registration_ui_state.value.copy(
+            first_name_error = result.status
+        )
+        first_name_validations_passed.value = result.status
+    }
+
+    private fun validateLastNameDataWithRules(){
+        val result = Validator.validateLastName(
             last_name = registration_ui_state.value.last_name
         )
-        val username_result = Validator.validateUsername(
+        registration_ui_state.value = registration_ui_state.value.copy(
+            last_name_error = result.status
+        )
+        last_name_validations_passed.value = result.status
+    }
+
+    private fun validateUsernameDataWithRules(){
+        val result = Validator.validateUsername(
             username = registration_ui_state.value.username
         )
-        val email_result = Validator.validateEmail(
+        registration_ui_state.value = registration_ui_state.value.copy(
+            username_error = result.status
+        )
+        username_validations_passed.value = result.status
+    }
+
+    private fun validateEmailDataWithRules(){
+        val result = Validator.validateEmail(
             email = registration_ui_state.value.email
         )
-        val password_result = Validator.validatePassword(
+        registration_ui_state.value = registration_ui_state.value.copy(
+            email_error = result.status
+        )
+        email_validations_passed.value = result.status
+    }
+
+    private fun validatePasswordDataWithRules(){
+        val result = Validator.validatePassword(
             password = registration_ui_state.value.password
         )
-        val phone_result = Validator.validatePhone(
+        registration_ui_state.value = registration_ui_state.value.copy(
+            password_error = result.status
+        )
+        password_validations_passed.value = result.status
+    }
+
+    private fun validatePhoneDataWithRules(){
+        val result = Validator.validatePhone(
             phone = registration_ui_state.value.phone
         )
-        val stage_name_result = Validator.validateStageName(
+        registration_ui_state.value = registration_ui_state.value.copy(
+            phone_error = result.status
+        )
+        phone_validations_passed.value = result.status
+    }
+
+    private fun validateStageNameDataWithRules(){
+        val result = Validator.validateStageName(
             stage_name = registration_ui_state.value.stage_name
         )
-
         registration_ui_state.value = registration_ui_state.value.copy(
-            first_name_error = first_name_result.status,
-            last_name_error = last_name_result.status,
-            username_error = username_result.status,
-            email_error = email_result.status,
-            password_error = password_result.status,
-            phone_error = phone_result.status,
-            stage_name_error = stage_name_result.status
+            stage_name_error = result.status
         )
-
-        if(first_name_result.status && last_name_result.status && username_result.status && email_result.status && password_result.status){
-            if(registration_ui_state.value.account_type == "Event Organizer account" && phone_result.status){
-                all_validations_passed.value = true
-            }else if (registration_ui_state.value.account_type == "Artist account" && stage_name_result.status){
-                all_validations_passed.value = true
-            }else all_validations_passed.value = registration_ui_state.value.account_type == "Regular Account"
-        }
+        stage_name_validations_passed.value = result.status
 
     }
+
 
     private fun printState(){
         Log.d(TAG,"Inside_printState")
         Log.d(TAG,registration_ui_state.toString())
     }
 
-    private fun createUserInFirebase(navController: NavController,email:String, password:String){
+    private fun createUserInFirebase(navController: NavController, registration_ui_state: RegistrationUiState){
 
         sign_up_in_progress.value = true
 
         FirebaseAuth.getInstance()
-            .createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener(){
-                if(it.isSuccessful){
-                    sign_up_in_progress.value = false
-                    navController.navigate(Constants.NAVIGATION_HOME_PAGE)
+            .createUserWithEmailAndPassword(registration_ui_state.email, registration_ui_state.password)
+            .addOnCompleteListener { task ->
+                if(task.isSuccessful){
+                    val user = task.result?.user
+                    user?.uid?.let { uid ->
+                        val db = FirebaseFirestore.getInstance()
+
+                        if(registration_ui_state.account_type == "Event Organizer account"){
+                            val userMap = hashMapOf(
+                                "email" to registration_ui_state.email,
+                                "username" to registration_ui_state.username,
+                                "first_name" to registration_ui_state.first_name,
+                                "last_name" to registration_ui_state.last_name,
+                                "rating" to 0.0,
+                                "phone" to registration_ui_state.phone,
+                            )
+                            db.collection("event_founder")
+                                .document(uid)
+                                .set(userMap)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "User added to Firestore successfully")
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.w(TAG, "Error adding user to Firestore", e)
+                                }
+                        }else if(registration_ui_state.account_type == "Artist account"){
+                            val userMap = hashMapOf(
+                                "email" to registration_ui_state.email,
+                                "username" to registration_ui_state.username,
+                                "first_name" to registration_ui_state.first_name,
+                                "last_name" to registration_ui_state.last_name,
+                                "rating" to 0.0,
+                                "stage_name" to registration_ui_state.stage_name,
+                                "genre" to null,
+
+                            )
+                            db.collection("artist")
+                                .document(uid)
+                                .set(userMap)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "User added to Firestore successfully")
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.w(TAG, "Error adding user to Firestore", e)
+                                }
+                        }else if(registration_ui_state.account_type == "Regular Account"){
+                            val userMap = hashMapOf(
+                                "email" to registration_ui_state.email,
+                                "username" to registration_ui_state.username,
+                                "first_name" to registration_ui_state.first_name,
+                                "last_name" to registration_ui_state.last_name,
+                                )
+                            db.collection("user")
+                                .document(uid)
+                                .set(userMap)
+                                .addOnSuccessListener {
+                                    Log.d(TAG, "User added to Firestore successfully")
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.w(TAG, "Error adding user to Firestore", e)
+                                }
+                        }
+
+
+                        sign_up_in_progress.value = false
+                        navController.navigate(Constants.NAVIGATION_HOME_PAGE)
+                    }
                 }
                 Log.d(TAG,"InCompleteListener")
-                Log.d(TAG,"isSuccesfull  = ${it.isSuccessful}")
-
+                Log.d(TAG,"isSuccessful  = ${task.isSuccessful}")
             }
-            .addOnFailureListener(){
+            .addOnFailureListener { exception ->
                 Log.d(TAG,"InFailureListener")
-                Log.d(TAG,"Exception = ${it.message}")
-                Log.d(TAG,"Exception = ${it.localizedMessage}")
+                Log.d(TAG,"Exception = ${exception.message}")
+                Log.d(TAG,"Exception = ${exception.localizedMessage}")
+                sign_up_in_progress.value = false
             }
     }
+
     fun logOutUser(navController: NavController){
         val firebaseAuth = FirebaseAuth.getInstance()
         firebaseAuth.signOut()

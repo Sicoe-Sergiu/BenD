@@ -107,7 +107,16 @@ fun SignUpScreen(
                     onButtonClicked = {
                         registerViewModel.onEvent(RegistrationUIEvent.RegisterButtonClicked(navController))
                     },
-                    is_enabled = registerViewModel.all_validations_passed.value
+                    is_enabled = registerViewModel.first_name_validations_passed.value &&
+                            registerViewModel.last_name_validations_passed.value &&
+                            registerViewModel.username_validations_passed.value &&
+                            registerViewModel.email_validations_passed.value &&
+                            registerViewModel.password_validations_passed.value &&
+                            (
+                                    (registerViewModel.registration_ui_state.value.account_type == "Event Organizer account" && registerViewModel.phone_validations_passed.value) ||
+                                            (registerViewModel.registration_ui_state.value.account_type == "Artist account" && registerViewModel.stage_name_validations_passed.value) ||
+                                            registerViewModel.registration_ui_state.value.account_type == "Regular Account"
+                                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ClickableLoginRegisterText(
@@ -121,6 +130,7 @@ fun SignUpScreen(
 
         if(registerViewModel.sign_up_in_progress.value)
             CircularProgressIndicator()
+
     }
 
 }
