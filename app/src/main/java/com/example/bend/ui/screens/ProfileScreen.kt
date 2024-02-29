@@ -52,6 +52,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import com.example.bend.Constants
 import com.example.bend.components.BottomNavigationBar
 import com.example.bend.components.BottomNavigationItem
 import com.example.bend.components.CustomTopBar
@@ -92,7 +93,8 @@ fun ProfileScreen(
                                 tint = Color.Black,
                                 modifier = Modifier
                                     .size(30.dp)
-                                    .clickable { //TODO: add click action
+                                    .clickable {
+                                        navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
                                     }
                             )
                         },

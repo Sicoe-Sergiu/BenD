@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.example.bend.events.ForgotPassUIEvent
-import com.example.bend.register_login.Validator
+import com.example.bend.register_login.RegisterLoginValidator
 import com.example.bend.ui_state.ForgotPasswordUiState
 import com.google.firebase.auth.FirebaseAuth
 
@@ -36,7 +36,7 @@ class ForgotPasswordViewModel: ViewModel() {
         }
     }
     private fun validateEmailDataWithRules(){
-        val email_result = Validator.validateEmail(
+        val email_result = RegisterLoginValidator.validateEmail(
             email = forgot_pass_ui_state.value.email
         )
         forgot_pass_ui_state.value = forgot_pass_ui_state.value.copy(

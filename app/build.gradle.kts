@@ -62,6 +62,7 @@ dependencies {
     implementation("androidx.compose.material:material:1.5.4")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
+    implementation("com.google.firebase:firebase-storage:20.3.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
@@ -88,10 +89,12 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx:24.10.0")
 //    grid
     implementation ("androidx.compose.foundation:foundation:1.2.0")
+//  photo picker
+    implementation ("io.coil-kt:coil-compose:2.1.0")
+//    photo crop
 
-
-
-
-
+//    date+time
+    implementation ("io.github.vanpra.compose-material-dialogs:datetime:0.8.1-rc")
+    coreLibraryDesugaring ("com.android.tools:desugar_jdk_libs:1.1.6")
 
 }

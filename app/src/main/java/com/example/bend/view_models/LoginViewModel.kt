@@ -6,10 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.example.bend.Constants
 import com.example.bend.events.LoginUIEvent
-import com.example.bend.events.RegistrationUIEvent
-import com.example.bend.register_login.Validator
+import com.example.bend.register_login.RegisterLoginValidator
 import com.example.bend.ui_state.LoginUiState
-import com.example.bend.ui_state.RegistrationUiState
 import com.google.firebase.auth.FirebaseAuth
 
 class LoginViewModel: ViewModel() {
@@ -49,7 +47,7 @@ class LoginViewModel: ViewModel() {
         }
     }
     private fun validateEmailDataWithRules(){
-        val email_result = Validator.validateEmail(
+        val email_result = RegisterLoginValidator.validateEmail(
             email = login_ui_state.value.email
         )
         login_ui_state.value = login_ui_state.value.copy(
@@ -59,7 +57,7 @@ class LoginViewModel: ViewModel() {
     }
     private fun validatePassDataWithRules() {
 
-        val password_result = Validator.validatePassword(
+        val password_result = RegisterLoginValidator.validatePassword(
             password = login_ui_state.value.password
         )
         login_ui_state.value = login_ui_state.value.copy(

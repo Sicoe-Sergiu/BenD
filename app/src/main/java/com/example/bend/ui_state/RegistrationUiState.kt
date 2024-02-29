@@ -11,7 +11,8 @@ data class RegistrationUiState(
 //    conditionals
     var phone:String = "",
     var stage_name:String = "",
-//
+
+// errors validation
 
     var first_name_error: Boolean = true,
     var last_name_error: Boolean = true,

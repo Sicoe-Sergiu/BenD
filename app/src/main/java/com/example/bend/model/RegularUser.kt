@@ -6,13 +6,17 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "regular_users", indices = [Index(value = ["uuid"], unique = true)])
-open class RegularUser(
-    @PrimaryKey() val uuid: UUID,
+data class User(
+    val uuid: UUID,
+    val username: String,
+    val firstName: String,
+    val lastName: String,
+    val email: String,
 
-    @ColumnInfo(name = "username") val username: String,
-    @ColumnInfo(name = "first_name") val first_name: String,
-    @ColumnInfo(name = "last_name") val last_name: String,
-    @ColumnInfo(name = "email") val email: String,
-    @ColumnInfo(name = "password") val password: String
+//    val eventsAttending: List<Event>,
+//    val followedArtists: List<Artist>,
+//    val followed_organizers: List<EventOrganizer>,
+//    val interests: List<String>,
+//    val favorite_genres: List<String>,
+//    val attendance_history: List<Event>
 )

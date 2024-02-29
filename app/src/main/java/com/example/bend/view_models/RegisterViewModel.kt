@@ -6,9 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.example.bend.Constants
 import com.example.bend.events.RegistrationUIEvent
-import com.example.bend.register_login.Validator
+import com.example.bend.register_login.RegisterLoginValidator
 import com.example.bend.ui_state.RegistrationUiState
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener
 import com.google.firebase.firestore.FirebaseFirestore
@@ -106,6 +105,7 @@ class RegisterViewModel : ViewModel() {
         }
     }
 
+
     private fun signUp(navController: NavController){
         Log.d(TAG,"Inside_signUp")
         printState()
@@ -115,7 +115,7 @@ class RegisterViewModel : ViewModel() {
         )
     }
     private fun validateFirstNameDataWithRules(){
-        val result = Validator.validateFirstName(
+        val result = RegisterLoginValidator.validateFirstName(
             first_name = registration_ui_state.value.first_name
         )
         registration_ui_state.value = registration_ui_state.value.copy(
@@ -125,7 +125,7 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun validateLastNameDataWithRules(){
-        val result = Validator.validateLastName(
+        val result = RegisterLoginValidator.validateLastName(
             last_name = registration_ui_state.value.last_name
         )
         registration_ui_state.value = registration_ui_state.value.copy(
@@ -135,7 +135,7 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun validateUsernameDataWithRules(){
-        val result = Validator.validateUsername(
+        val result = RegisterLoginValidator.validateUsername(
             username = registration_ui_state.value.username
         )
         registration_ui_state.value = registration_ui_state.value.copy(
@@ -145,7 +145,7 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun validateEmailDataWithRules(){
-        val result = Validator.validateEmail(
+        val result = RegisterLoginValidator.validateEmail(
             email = registration_ui_state.value.email
         )
         registration_ui_state.value = registration_ui_state.value.copy(
@@ -155,7 +155,7 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun validatePasswordDataWithRules(){
-        val result = Validator.validatePassword(
+        val result = RegisterLoginValidator.validatePassword(
             password = registration_ui_state.value.password
         )
         registration_ui_state.value = registration_ui_state.value.copy(
@@ -165,7 +165,7 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun validatePhoneDataWithRules(){
-        val result = Validator.validatePhone(
+        val result = RegisterLoginValidator.validatePhone(
             phone = registration_ui_state.value.phone
         )
         registration_ui_state.value = registration_ui_state.value.copy(
@@ -175,7 +175,7 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun validateStageNameDataWithRules(){
-        val result = Validator.validateStageName(
+        val result = RegisterLoginValidator.validateStageName(
             stage_name = registration_ui_state.value.stage_name
         )
         registration_ui_state.value = registration_ui_state.value.copy(

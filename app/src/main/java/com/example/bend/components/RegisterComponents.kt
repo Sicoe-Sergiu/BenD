@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.example.bend.ui.theme.Primary
 import com.example.bend.ui.theme.PrimaryText
 import com.example.bend.ui.theme.Secondary
+import com.example.bend.ui.theme.green
 
 
 @Composable

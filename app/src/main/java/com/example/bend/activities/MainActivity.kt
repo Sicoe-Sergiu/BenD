@@ -10,6 +10,7 @@ import com.example.bend.Constants
 import com.example.bend.register_login.ResetPasswordScreen
 import com.example.bend.register_login.SignInScreen
 import com.example.bend.register_login.SignUpScreen
+import com.example.bend.ui.screens.CreateEventScreen
 import com.example.bend.ui.screens.FeedScreen
 import com.example.bend.ui.screens.ProfileScreen
 import com.example.bend.ui.screens.SearchScreen
@@ -30,7 +31,7 @@ class MainActivity : ComponentActivity() {
             }
 
 
-            NavHost(navController = navController, startDestination = startDestination){
+            NavHost(navController = navController, startDestination = Constants.NAVIGATION_CREATE_EVENT_PAGE){
 //                LoginScreen
                 composable(Constants.NAVIGATION_LOGIN_PAGE){SignInScreen(navController = navController)}
 //                RegisterScreen
@@ -43,6 +44,8 @@ class MainActivity : ComponentActivity() {
                 composable(Constants.NAVIGATION_PROFILE_PAGE){ProfileScreen(navController = navController)}
 //                SearchScreen
                 composable(Constants.NAVIGATION_SEARCH_PAGE){SearchScreen(navController = navController)}
+//                CreateEventScreen
+                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE){ CreateEventScreen(navController = navController) }
             }
         }
     }

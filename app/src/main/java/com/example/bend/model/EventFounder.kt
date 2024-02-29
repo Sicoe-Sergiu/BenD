@@ -7,17 +7,18 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Entity(tableName = "event_founder", indices = [Index(value = ["uuid"], unique = true)])
-data class EventFounder(
-    @PrimaryKey() val uuid: UUID,
+data class EventOrganizer(
+    val uuid: UUID,
+    val username: String,
+    val firstName: String,
+    val lastName: String,
+    val phone: String,
+    val email: String,
+    val rating: Double,
 
-    @ColumnInfo(name = "username") val username: String,
-    @ColumnInfo(name = "first_name") val first_name: String,
-    @ColumnInfo(name = "last_name") val last_name: String,
-    @ColumnInfo(name = "email") val email: String,
-    @ColumnInfo(name = "password") val password: String,
+    val past_events: List<Event>,
+    val future_events: List<Event>,
 
-    @ColumnInfo(name = "phone") val phone: String,
-    @ColumnInfo(name = "rating") val rating: Float,
-
+//    val followers: List<User>,
+//    val following: List<User>
 )

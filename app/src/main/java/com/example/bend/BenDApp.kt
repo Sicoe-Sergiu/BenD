@@ -2,8 +2,7 @@ package com.example.bend
 
 import android.app.Application
 import androidx.room.Room
-import com.example.bend.persistance.dao.AppDAO
-import com.example.bend.persistence.AppDatabase
+//import com.example.bend.persistance.dao.AppDAO
 import com.google.firebase.FirebaseApp
 
 

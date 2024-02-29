@@ -1,6 +1,5 @@
 package com.example.bend
 
-import com.example.bend.model.RegularUser
 import java.util.UUID
 
 object Constants {
@@ -11,6 +10,7 @@ object Constants {
     const val NAVIGATION_HOME_PAGE = "homePage"
     const val NAVIGATION_PROFILE_PAGE = "profilePage"
     const val NAVIGATION_SEARCH_PAGE = "searchPage"
+    const val NAVIGATION_CREATE_EVENT_PAGE = "createEventPage"
 
     const val NAVIGATION_MAIN_PAGE = "mainPage"
     const val NAVIGATION_REGULAR_USERS_LIST = "regularUsersList"
