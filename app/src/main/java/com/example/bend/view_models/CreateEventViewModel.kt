@@ -143,11 +143,10 @@ class CreateEventViewModel : ViewModel() {
 
         val eventUUID = UUID.randomUUID()
         val storageRef: StorageReference = storage.reference.child("events_posters/$eventUUID")
-        val db = FirebaseFirestore.getInstance()
 
         createEventUiState.value.posterUri?.let { posterUri ->
             storageRef.putFile(posterUri)
-                .addOnSuccessListener { taskSnapshot ->
+                .addOnSuccessListener {
                     storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                         createEventInDatabase(eventUUID, downloadUrl.toString())
                     }
@@ -180,6 +179,7 @@ class CreateEventViewModel : ViewModel() {
                 .addOnSuccessListener {
                     // TODO: Handle succes
                     Log.d("EVENT", "Event added successfully")
+                    eventCreationInProgress.value = false
                 }
                 .addOnFailureListener { e ->
                     // TODO: Handle unsuccessful upload

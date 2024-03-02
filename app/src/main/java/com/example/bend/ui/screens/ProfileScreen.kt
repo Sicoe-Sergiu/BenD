@@ -255,6 +255,20 @@ fun RoundImage(
             .clip(CircleShape)
     )
 }
+@Composable
+fun RoundImageNoBorder(
+    image: Painter,
+    modifier: Modifier = Modifier
+) {
+    Image(
+        painter = image,
+        contentDescription = null,
+        modifier = modifier
+            .aspectRatio(1f, matchHeightConstraintsFirst = true)
+            .padding(3.dp)
+            .clip(CircleShape)
+    )
+}
 
 @Composable
 fun StatSection(modifier: Modifier = Modifier) {

@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.example.bend.Constants
 import com.example.bend.events.RegistrationUIEvent
+import com.example.bend.model.Artist
+import com.example.bend.model.EventFounder
+import com.example.bend.model.User
 import com.example.bend.register_login.RegisterLoginValidator
 import com.example.bend.ui_state.RegistrationUiState
 import com.google.firebase.auth.FirebaseAuth
@@ -204,17 +207,27 @@ class RegisterViewModel : ViewModel() {
                         val db = FirebaseFirestore.getInstance()
 
                         if(registration_ui_state.account_type == "Event Organizer account"){
-                            val userMap = hashMapOf(
-                                "email" to registration_ui_state.email,
-                                "username" to registration_ui_state.username,
-                                "first_name" to registration_ui_state.first_name,
-                                "last_name" to registration_ui_state.last_name,
-                                "rating" to 0.0,
-                                "phone" to registration_ui_state.phone,
+//                            val userMap = hashMapOf(
+//                                "email" to registration_ui_state.email,
+//                                "username" to registration_ui_state.username,
+//                                "first_name" to registration_ui_state.first_name,
+//                                "last_name" to registration_ui_state.last_name,
+//                                "rating" to 0.0,
+//                                "phone" to registration_ui_state.phone,
+//                            )
+                            val founder = EventFounder(
+                                uuid = uid,
+                                username = registration_ui_state.username,
+                                firstName = registration_ui_state.first_name,
+                                lastName = registration_ui_state.last_name,
+                                phone = registration_ui_state.phone,
+                                email = registration_ui_state.email,
+                                rating = 0.0
                             )
+
                             db.collection("event_founder")
                                 .document(uid)
-                                .set(userMap)
+                                .set(founder)
                                 .addOnSuccessListener {
                                     Log.d(TAG, "User added to Firestore successfully")
                                 }
@@ -222,19 +235,28 @@ class RegisterViewModel : ViewModel() {
                                     Log.w(TAG, "Error adding user to Firestore", e)
                                 }
                         }else if(registration_ui_state.account_type == "Artist account"){
-                            val userMap = hashMapOf(
-                                "email" to registration_ui_state.email,
-                                "username" to registration_ui_state.username,
-                                "first_name" to registration_ui_state.first_name,
-                                "last_name" to registration_ui_state.last_name,
-                                "rating" to 0.0,
-                                "stage_name" to registration_ui_state.stage_name,
-                                "genre" to null,
+//                            val userMap = hashMapOf(
+//                                "email" to registration_ui_state.email,
+//                                "username" to registration_ui_state.username,
+//                                "first_name" to registration_ui_state.first_name,
+//                                "last_name" to registration_ui_state.last_name,
+//                                "rating" to 0.0,
+//                                "stage_name" to registration_ui_state.stage_name,
+//                                "genre" to null,
+//
+//                            )
+                            val artist = Artist(
+                                uuid = uid,
+                                username = registration_ui_state.username,
+                                email = registration_ui_state.email,
+                                firstName = registration_ui_state.first_name,
+                                lastName = registration_ui_state.last_name,
+                                stageName = registration_ui_state.stage_name,
 
                             )
                             db.collection("artist")
                                 .document(uid)
-                                .set(userMap)
+                                .set(artist)
                                 .addOnSuccessListener {
                                     Log.d(TAG, "User added to Firestore successfully")
                                 }
@@ -242,15 +264,23 @@ class RegisterViewModel : ViewModel() {
                                     Log.w(TAG, "Error adding user to Firestore", e)
                                 }
                         }else if(registration_ui_state.account_type == "Regular Account"){
-                            val userMap = hashMapOf(
-                                "email" to registration_ui_state.email,
-                                "username" to registration_ui_state.username,
-                                "first_name" to registration_ui_state.first_name,
-                                "last_name" to registration_ui_state.last_name,
-                                )
+//                            val userMap = hashMapOf(
+//                                "email" to registration_ui_state.email,
+//                                "username" to registration_ui_state.username,
+//                                "first_name" to registration_ui_state.first_name,
+//                                "last_name" to registration_ui_state.last_name,
+//                                )
+
+                            val user = User(
+                                uuid = uid,
+                                username = registration_ui_state.username,
+                                email = registration_ui_state.email,
+                                firstName = registration_ui_state.first_name,
+                                lastName = registration_ui_state.last_name,
+                            )
                             db.collection("user")
                                 .document(uid)
-                                .set(userMap)
+                                .set(user)
                                 .addOnSuccessListener {
                                     Log.d(TAG, "User added to Firestore successfully")
                                 }
@@ -275,7 +305,7 @@ class RegisterViewModel : ViewModel() {
             }
     }
 
-    fun logOutUser(navController: NavController){
+    private fun logOutUser(navController: NavController){
         val firebaseAuth = FirebaseAuth.getInstance()
         firebaseAuth.signOut()
 

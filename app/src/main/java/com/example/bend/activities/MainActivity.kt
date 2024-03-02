@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
             }
 
 
-            NavHost(navController = navController, startDestination = Constants.NAVIGATION_CREATE_EVENT_PAGE){
+            NavHost(navController = navController, startDestination = Constants.NAVIGATION_HOME_PAGE){
 //                LoginScreen
                 composable(Constants.NAVIGATION_LOGIN_PAGE){SignInScreen(navController = navController)}
 //                RegisterScreen
