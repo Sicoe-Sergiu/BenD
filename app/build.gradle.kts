@@ -90,7 +90,7 @@ dependencies {
 //    grid
     implementation ("androidx.compose.foundation:foundation:1.2.0")
 //  photo picker
-    implementation ("io.coil-kt:coil-compose:2.1.0")
+    implementation ("io.coil-kt:coil-compose:2.4.0")
 //    photo crop
 
 //    date+time
@@ -98,5 +98,8 @@ dependencies {
     coreLibraryDesugaring ("com.android.tools:desugar_jdk_libs:1.1.6")
 //    preview
     debugImplementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
+//refresh
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.27.0")
+
 
 }

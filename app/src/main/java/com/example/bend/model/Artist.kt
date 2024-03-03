@@ -11,5 +11,8 @@ data class Artist(
     val email: String,
     val firstName: String,
     val lastName: String,
-    val stageName: String
-)
+    val stageName: String,
+    val profilePhotoURL:String
+) {
+    constructor() : this("", "", "", "", "", "","")
+}

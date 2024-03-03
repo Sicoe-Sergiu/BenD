@@ -32,7 +32,7 @@ fun CustomTopBar(
 ) {
     Box(
         modifier = Modifier
-            .height(55.dp)
+            .height(50.dp)
             .background(
                 brush = Brush.horizontalGradient(listOf(Secondary, Primary)),
             )

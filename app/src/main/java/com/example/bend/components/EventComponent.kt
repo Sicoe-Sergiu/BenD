@@ -29,7 +29,6 @@ import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -57,8 +56,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.bend.model.Event
 import com.example.bend.R
+import com.example.bend.model.Artist
+import com.example.bend.model.EventFounder
 import com.example.bend.ui.screens.RoundImage
 import com.example.bend.ui.screens.RoundImageNoBorder
 import com.example.bend.ui.theme.PrimaryText
@@ -66,185 +68,195 @@ import java.util.UUID
 
 @Composable
 fun EventComponent(
-    event: Event
+    event: Event,
+    founder: EventFounder?,
+    artists:List<Artist>,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Surface {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .padding(15.dp)
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(15.dp)
+            .clip(shape = RoundedCornerShape(16.dp))
+
+    ) {
+        Column(
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row (
+                Row(
                     verticalAlignment = Alignment.CenterVertically,
-                ){
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(shape = RoundedCornerShape(30.dp))
-                            .clickable {
-//                            TODO:click
-                            }
-                    ) {
-                        RoundImage(
-                            image = painterResource(
-//                            TODO: add image from view model
-                                id = R.drawable.baseline_man_24
-                            ),
-                            modifier = Modifier
-                                .size(60.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-//                        TODO: name
-                            text = "Founder Name",
-                            modifier = Modifier,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(50.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.calendar),
-                            contentDescription = "calendar icon",
-                            modifier = Modifier.size(20.dp)
-
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = event.startDate,
-                            modifier = Modifier,
-                            fontWeight = FontWeight.Light,
-                            fontSize = 20.sp
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Image(
-                    painter = painterResource(id = R.drawable.mica),
-                    contentDescription = null,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.6f)
-                        .clip(shape = RoundedCornerShape(10.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Box(
-                    modifier = Modifier
+                        .clip(shape = RoundedCornerShape(30.dp))
                         .clickable {
-                            expanded = !expanded
+//                            TODO:click
                         }
-                )
-                {
-                    if (expanded) Icon(
-                        imageVector = Icons.Outlined.KeyboardArrowUp,
-                        contentDescription = null,
-                        tint = PrimaryText,
+                ) {
+                    RoundImage(
+                        imageUrl = founder?.profilePhotoURL ?: "",
                         modifier = Modifier
-                            .width(60.dp)
-                            .height(30.dp)
-                    ) else Icon(
-                        imageVector = Icons.Outlined.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = PrimaryText,
-                        modifier = Modifier
-                            .width(60.dp)
-                            .height(30.dp)
-
+                            .size(50.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = founder?.username ?: "",
+                        modifier = Modifier,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+                Spacer(modifier = Modifier.width(50.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.calendar),
+                        contentDescription = "calendar icon",
+                        modifier = Modifier.size(20.dp)
 
-                if (expanded) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = event.startDate,
+                        modifier = Modifier,
+                        fontWeight = FontWeight.Light,
+                        fontSize = 20.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Poster(
+                posterUrl = event.posterDownloadLink,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.6f)
+                    .clip(shape = RoundedCornerShape(10.dp)),
+            )
+            Box(
+                modifier = Modifier
+                    .clickable {
+                        expanded = !expanded
+                    }
+            )
+            {
+                if (expanded) Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowUp,
+                    contentDescription = null,
+                    tint = PrimaryText,
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(30.dp)
+                ) else Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = PrimaryText,
+                    modifier = Modifier
+                        .width(60.dp)
+                        .height(30.dp)
+
+                )
+            }
+
+            if (expanded) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.location),
-                                    contentDescription = "location icon",
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .height(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = event.location,
-                                    modifier = Modifier,
-                                    fontWeight = FontWeight.Normal,
-                                    fontSize = 20.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.baseline_access_time_24),
-                                    contentDescription = "money icon",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = event.startTime + " - " + event.endTime,
-                                    modifier = Modifier,
-                                    fontWeight = FontWeight.Normal,
-                                    fontSize = 20.sp
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(5.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.money),
+                                painter = painterResource(id = R.drawable.location),
+                                contentDescription = "location icon",
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .height(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = event.location,
+                                modifier = Modifier,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 20.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.baseline_access_time_24),
                                 contentDescription = "money icon",
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                text = event.entranceFee.toString(),
+                                text = event.startTime + " - " + event.endTime,
                                 modifier = Modifier,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 20.sp
                             )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = "RON",
-                                modifier = Modifier,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            )
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
                     }
-                    ArtistsSection(event)
-                    Spacer(modifier = Modifier.height(5.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.money),
+                            contentDescription = "money icon",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = event.entranceFee.toString(),
+                            modifier = Modifier,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 20.sp
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = "RON",
+                            modifier = Modifier,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                 }
-                ActionBarEvent()
+                ArtistsSection(artists)
+                Spacer(modifier = Modifier.height(5.dp))
             }
+            ActionBarEvent()
         }
     }
+
+}
+
+@Composable
+fun Poster(posterUrl: String, modifier: Modifier) {
+    AsyncImage(
+        model = posterUrl,
+        contentDescription = "poster image",
+        modifier = modifier,
+        contentScale = ContentScale.Crop
+    )
 }
 
 @Composable
 fun ArtistsSection(
-    event: Event
+    artists: List<Artist>
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -255,7 +267,7 @@ fun ArtistsSection(
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(5.dp))
-        if (event.artistStageNames.size > 1)
+        if (artists.size > 1)
             Text(
                 text = "Artists:",
                 modifier = Modifier,
@@ -270,14 +282,14 @@ fun ArtistsSection(
                 fontSize = 20.sp
             )
     }
-    ArtistsComponentList(event = event)
+    ArtistsComponentList(artists = artists)
 }
 
 @Composable
 fun ArtistsComponentList(
-    event: Event
+    artists: List<Artist>
 ) {
-    val chunkedArtists = event.artistStageNames.chunked(3)
+    val chunkedArtists = artists.chunked(3)
     chunkedArtists.forEach { artistChunk ->
         Row(
             modifier = Modifier
@@ -291,6 +303,8 @@ fun ArtistsComponentList(
                     modifier = Modifier
                         .widthIn(max = 122.dp)
                         .padding(horizontal = 4.dp)
+                    ,
+                    artist = artist
                 )
             }
         }
@@ -299,7 +313,8 @@ fun ArtistsComponentList(
 
 @Composable
 fun ArtistComponent(
-    modifier: Modifier
+    modifier: Modifier,
+    artist: Artist
 ) {
     Row(
         modifier = modifier
@@ -325,15 +340,13 @@ fun ArtistComponent(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RoundImageNoBorder(
-            image = painterResource(
-                id = R.drawable.baseline_man_24
-            ),
+            imageURL = artist.profilePhotoURL,
             modifier = Modifier
                 .size(40.dp)
                 .weight(0.3f)
         )
         Text(
-            text = "USERNAMasdasdasdasdasdasdasdasdaEsfsdfsdfsdfsffffffffff",
+            text = artist.stageName,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.CenterVertically)
@@ -498,23 +511,4 @@ fun MyIconButton(
         )
         Spacer(modifier = Modifier.width(5.dp))
     }
-}
-
-@Preview
-@Composable
-fun EventComponentPreview() {
-    EventComponent(
-        Event(
-            uuid = UUID.randomUUID(),
-            organizerUUID = "organizer UID",
-            location = "location string",
-            entranceFee = 250,
-            startDate = "2024-03-21",
-            endDate = "2024-03-25",
-            startTime = "12:00",
-            endTime = "16:00",
-            posterDownloadLink = "",
-            artistStageNames = listOf("artist1", "artist2")
-        )
-    )
 }

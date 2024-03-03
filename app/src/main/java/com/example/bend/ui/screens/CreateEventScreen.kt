@@ -94,7 +94,8 @@ fun CreateEventScreen(
         bottomBar = {
             BottomNavigationBar(
                 navController = navController,
-                selectedItem = BottomNavigationItem.FEED
+                selectedItem = BottomNavigationItem.FEED,
+
             )
         },
 

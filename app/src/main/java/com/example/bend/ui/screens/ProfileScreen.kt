@@ -52,6 +52,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import coil.compose.AsyncImage
 import com.example.bend.Constants
 import com.example.bend.components.BottomNavigationBar
 import com.example.bend.components.BottomNavigationItem
@@ -74,7 +75,7 @@ fun ProfileScreen(
         bottomBar = {
             BottomNavigationBar(
                 navController = navController,
-                selectedItem = BottomNavigationItem.FEED
+                selectedItem = BottomNavigationItem.PROFILE
             )
         },
 
@@ -165,9 +166,8 @@ fun ProfileSection(userData: Map<String, Any>, profileViewModel: ProfileViewMode
                 .padding(horizontal = 20.dp)
         ) {
             RoundImage(
-                image = painterResource(
-                    id = R.drawable.baseline_man_24
-                ),
+//                TODO:profile photo add
+                imageUrl = "",
                 modifier = Modifier
                     .size(100.dp)
                     .weight(3f)
@@ -238,12 +238,13 @@ fun ProfileDescription(
 
 @Composable
 fun RoundImage(
-    image: Painter,
+    imageUrl: String,
     modifier: Modifier = Modifier
 ) {
-    Image(
-        painter = image,
-        contentDescription = null,
+
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = "poster image",
         modifier = modifier
             .aspectRatio(1f, matchHeightConstraintsFirst = true)
             .border(
@@ -253,20 +254,24 @@ fun RoundImage(
             )
             .padding(3.dp)
             .clip(CircleShape)
+        ,
+        contentScale = ContentScale.Crop
     )
 }
 @Composable
 fun RoundImageNoBorder(
-    image: Painter,
+    imageURL: String,
     modifier: Modifier = Modifier
 ) {
-    Image(
-        painter = image,
-        contentDescription = null,
+    AsyncImage(
+        model = imageURL,
+        contentDescription = "poster image",
         modifier = modifier
             .aspectRatio(1f, matchHeightConstraintsFirst = true)
             .padding(3.dp)
             .clip(CircleShape)
+        ,
+        contentScale = ContentScale.Crop
     )
 }
 

@@ -6,12 +6,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
+import com.example.bend.Constants
 import com.example.bend.events.CreateEventUIEvent
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
+import com.example.bend.model.EventArtist
 import com.example.bend.register_login.CreateEventValidator
 import com.example.bend.ui_state.CreateEventUiState
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
@@ -25,6 +28,8 @@ class CreateEventViewModel : ViewModel() {
     private val firestore = FirebaseFirestore.getInstance()
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
+    private val artistsCollection: CollectionReference =
+        FirebaseFirestore.getInstance().collection("artist")
 
     private val artistsLiveData: MutableLiveData<List<Artist>> = MutableLiveData()
     val artistsStageNamesLiveData: LiveData<List<String>> = getArtistStageNames()
@@ -161,7 +166,7 @@ class CreateEventViewModel : ViewModel() {
     private fun createEventInDatabase(eventUUID: UUID, posterDownloadLink: String) {
         createEventUiState.value.run {
             val event = Event(
-                uuid = eventUUID,
+                uuid = eventUUID.toString(),
                 location = location,
                 entranceFee = entranceFee,
                 startDate = startDate.toString(),
@@ -169,8 +174,9 @@ class CreateEventViewModel : ViewModel() {
                 startTime = startTime.toString(),
                 endTime = endTime.toString(),
                 artistStageNames = artistsStageNames,
-                organizerUUID = currentUser?.uid ?: "",
-                posterDownloadLink = posterDownloadLink
+                founderUUID = currentUser?.uid ?: "",
+                posterDownloadLink = posterDownloadLink,
+                creationTimestamp = System.currentTimeMillis()
             )
 
             val db = FirebaseFirestore.getInstance()
@@ -179,7 +185,41 @@ class CreateEventViewModel : ViewModel() {
                 .addOnSuccessListener {
                     // TODO: Handle succes
                     Log.d("EVENT", "Event added successfully")
-                    eventCreationInProgress.value = false
+
+                    val artistsList = mutableListOf<Artist>()
+                    artistsCollection
+                        .whereIn("stageName", artistsStageNames)
+                        .get()
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                for (document in task.result!!) {
+                                    val artist = document.toObject(Artist::class.java)
+                                    artistsList.add(artist)
+                                }
+                                for (artist in artistsList){
+                                    val eventArtist = EventArtist(artistUUID = artist.uuid, eventUUID = event.uuid)
+                                    db.collection("event_artist")
+                                        .document(UUID.randomUUID().toString())
+                                        .set(eventArtist)
+                                        .addOnCompleteListener { task ->
+                                            if (task.isSuccessful) {
+                                                Log.e("EVENT", "event_artist added ")
+                                                navController.navigate(Constants.NAVIGATION_PROFILE_PAGE)
+                                            }
+                                        }
+                                        .addOnFailureListener { e ->
+                                            // TODO: Handle unsuccessful upload
+                                            Log.e("EVENT", "Error adding event_artist: $e")
+                                        }
+                                }
+
+                                eventCreationInProgress.value = false
+                            }
+                        }.addOnFailureListener { e ->
+                            // TODO: Handle unsuccessful fetching artists
+                            Log.e("EVENT", "Error fetching artists: $e")
+                        }
+
                 }
                 .addOnFailureListener { e ->
                     // TODO: Handle unsuccessful upload

@@ -22,7 +22,7 @@ fun SearchScreen (
     Scaffold(
         topBar = {},
         bottomBar = {
-            BottomNavigationBar(navController = navController, selectedItem = BottomNavigationItem.FEED)
+            BottomNavigationBar(navController = navController, selectedItem = BottomNavigationItem.SEARCH)
         },
 
         ) {

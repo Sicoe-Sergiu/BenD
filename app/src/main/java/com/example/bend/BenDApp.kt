@@ -7,32 +7,6 @@ import com.google.firebase.FirebaseApp
 
 
 class BenDApp : Application() {
-//    private var db : AppDatabase? = null;
-//
-//    init {
-//        instance = this;
-//    }
-//
-//    private fun getDb() : AppDatabase {
-//        if (db != null){
-//            return db!!;
-//        }else{
-//            db = Room.databaseBuilder(
-//                instance!!.applicationContext,
-//                AppDatabase::class.java, "BenD_db"
-//            ).fallbackToDestructiveMigration().build()
-//        }
-//        return db!!
-//    }
-//
-//    companion object {
-//        private var instance: BenDApp? = null;
-//
-//        fun getAppDao() : AppDAO {
-//            return instance!!.getDb().AppDAO();
-//        }
-//    }
-
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
