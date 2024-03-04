@@ -127,9 +127,10 @@ fun SignUpScreen(
                 )
             }
         }
+//        TODO: repair this
 
-        if(registerViewModel.sign_up_in_progress.value)
-            CircularProgressIndicator()
+//        if(registerViewModel.sign_up_in_progress.value)
+//            CircularProgressIndicator()
 
     }
 

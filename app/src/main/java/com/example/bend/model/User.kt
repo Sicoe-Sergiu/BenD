@@ -9,10 +9,10 @@ data class User(
     val lastName: String,
     val email: String,
 
-//    val eventsAttending: List<Event>,
 //    val followedArtists: List<Artist>,
 //    val followed_organizers: List<EventOrganizer>,
 //    val interests: List<String>,
 //    val favorite_genres: List<String>,
-//    val attendance_history: List<Event>
-)
+){
+    constructor() : this("", "", "", "", "")
+}

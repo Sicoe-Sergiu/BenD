@@ -85,7 +85,9 @@ fun EventsList(
                 EventComponent(
                     event = event,
                     founder = homeViewModel.getFounderByUUID(event.founderUUID),
-                    artists = homeViewModel.getEventArtists(event)
+                    artists = homeViewModel.getEventArtists(event),
+                    viewModel = homeViewModel,
+                    navController = NavController
                 )
                 if (index < events.size - 1) {
                     Divider(

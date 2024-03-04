@@ -18,7 +18,8 @@ class ProfileViewModel : ViewModel() {
     private val currentUser = firebaseAuth.currentUser
     private val collections = listOf("artist", "event_founder", "user")
     private var documentId = ""
-    var accountType = ""
+    var accountType: LiveData<String> = MutableLiveData("")
+
 
     private val _userData = MutableLiveData<Map<String, Any>?>()
     private val _profileState = MutableLiveData<ProfileState>()

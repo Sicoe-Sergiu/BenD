@@ -25,16 +25,12 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Surface
+import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,9 +49,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.bend.model.Event
 import com.example.bend.R
@@ -64,14 +60,20 @@ import com.example.bend.model.EventFounder
 import com.example.bend.ui.screens.RoundImage
 import com.example.bend.ui.screens.RoundImageNoBorder
 import com.example.bend.ui.theme.PrimaryText
-import java.util.UUID
+import com.example.bend.view_models.HomeViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.draw.alpha
 
 @Composable
 fun EventComponent(
     event: Event,
     founder: EventFounder?,
-    artists:List<Artist>,
+    artists: List<Artist>,
     modifier: Modifier = Modifier,
+    viewModel: HomeViewModel,
+    navController: NavController.Companion,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -238,7 +240,7 @@ fun EventComponent(
                 ArtistsSection(artists)
                 Spacer(modifier = Modifier.height(5.dp))
             }
-            ActionBarEvent()
+            ActionBarEvent(viewModel = viewModel, event = event)
         }
     }
 
@@ -249,8 +251,10 @@ fun Poster(posterUrl: String, modifier: Modifier) {
     AsyncImage(
         model = posterUrl,
         contentDescription = "poster image",
-        modifier = modifier,
-        contentScale = ContentScale.Crop
+        modifier = modifier
+            .size(400.dp)
+        ,
+        contentScale = ContentScale.FillBounds
     )
 }
 
@@ -359,19 +363,15 @@ fun ArtistComponent(
 
 @Composable
 fun showToast(context: android.content.Context, message: String) {
-    val density = LocalDensity.current.density
-    val yOffset = (64 * density).toInt()
-
-    Toast.makeText(context, message, Toast.LENGTH_SHORT).apply {
-        setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, yOffset)
-    }.show()
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
 @Composable
 fun ActionBarEvent(
+    viewModel:HomeViewModel,
+    event: Event
 ) {
     var attend by remember { mutableStateOf(false) }
-//    TODO: give value to attend
     var showMessage by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf("false") }
     var showConfirmationDialog by remember { mutableStateOf(false) }
@@ -380,6 +380,10 @@ fun ActionBarEvent(
         showToast(context = context, message = toastMessage)
         showMessage = false
     }
+    LaunchedEffect(key1 = event) {
+        attend = viewModel.ifAttend(event)
+    }
+    val eventAttendees = viewModel.eventsAttendees.observeAsState()
 
     if (showConfirmationDialog) {
         AlertDialog(
@@ -413,7 +417,7 @@ fun ActionBarEvent(
                     }
                     TextButton(
                         onClick = {
-                            // TODO: Handle confirmation action
+                            viewModel.repostEvent(event)
                             showConfirmationDialog = false
                         },
                         colors = ButtonDefaults.textButtonColors(contentColor = Color.Green)
@@ -442,22 +446,23 @@ fun ActionBarEvent(
                     R.drawable.attend_uncheckedpng
                 }
             ),
-            text = "",
             onClick = {
                 if (attend) {
+                    viewModel.removeEventFromUserList(event)
                     toastMessage = "Event removed from your list."
                     showMessage = true
                 } else {
+                    viewModel.addEventToUserList(event)
                     toastMessage = "Event added to your list."
                     showMessage = true
                 }
                 attend = !attend
             },
-            modifier = Modifier
+            modifier = Modifier,
+            enable = if (viewModel.accountType.value == "user") true else false
         )
         Text(
-//            TODO:give the actual number for
-            text = "4556 People Attend",
+            text = (eventAttendees.value?.find { it.first == event }?.second ?: 0).toString() + " People Attend",
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.CenterVertically),
@@ -466,11 +471,11 @@ fun ActionBarEvent(
 
         MyIconButton(
             painter = painterResource(id = R.drawable.repost),
-            text = "",
             onClick = {
                 showConfirmationDialog = true
             },
-            modifier = Modifier
+            modifier = Modifier,
+            enable = true
         )
     }
 }
@@ -480,11 +485,11 @@ fun ActionBarEvent(
 fun MyIconButton(
     onClick: () -> Unit,
     painter: Painter,
-    text: String,
-    modifier: Modifier
+    modifier: Modifier,
+    enable: Boolean
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    IconButton(
+        onClick = { if (enable) onClick.invoke() },
         modifier = modifier
             .clip(
                 RoundedCornerShape(
@@ -494,21 +499,17 @@ fun MyIconButton(
                     bottomEnd = CornerSize(16.dp)
                 )
             )
-            .clickable { onClick.invoke() }
+            .clickable { if (enable) onClick.invoke() }
             .padding(5.dp)
+            .then(if (enable) Modifier else Modifier.alpha(0f)),
 
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier,
-            fontWeight = FontWeight.Normal,
-            fontSize = 20.sp
+        content = {
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier.size(30.dp)
+            )
+        },
+        enabled = enable,
         )
-        Image(
-            painter = painter,
-            contentDescription = null,
-            modifier = Modifier.size(30.dp)
-        )
-        Spacer(modifier = Modifier.width(5.dp))
-    }
 }
