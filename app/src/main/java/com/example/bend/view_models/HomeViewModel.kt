@@ -1,6 +1,10 @@
 package com.example.bend.view_models
 
 import android.util.Log
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -11,12 +15,13 @@ import com.example.bend.model.EventArtist
 import com.example.bend.model.EventFounder
 import com.example.bend.model.User
 import com.example.bend.model.UserEvent
-import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -52,43 +57,52 @@ class HomeViewModel : ViewModel() {
     var eventsAttendees: LiveData<List<Pair<Event, Int>>> = MutableLiveData(emptyList())
     var accountType: LiveData<String> = MutableLiveData("")
 
+    var homeScreenScrollState: LazyListState by mutableStateOf(LazyListState(0, 0))
+    private val usersCollectionNames = listOf<String>("artist", "event_founder", "user")
+
     init {
-        loadData()
         viewModelScope.launch {
-            setAccountType()
+            loadData()
+            (accountType as MutableLiveData).postValue(getAccountType(currentUser?.uid.toString()))
         }
     }
 
     fun loadData() {
-        _isLoading.value = true
-        Log.d(TAG, "loading data...")
-        fetchEvents()
-        fetchArtists()
-        fetchEventFounders()
-        fetchEventArtists()
-        Log.d(TAG, "loading data DONE")
-        _isLoading.value = false
-    }
-    private suspend fun setAccountType(){
-         try {
-            val artistSnapshot = artistsCollection.document(currentUser?.uid.toString()).get().await()
-            val founderSnapshot = eventFounderCollection.document(currentUser?.uid.toString()).get().await()
-            val userSnapshot = userCollection.document(currentUser?.uid.toString()).get().await()
-
-            if (artistSnapshot.exists()){
-                (accountType as MutableLiveData).value = "artist"
-            }else if(founderSnapshot.exists()){
-                (accountType as MutableLiveData).value = "event_founder"
-            }else if (userSnapshot.exists()){
-                (accountType as MutableLiveData).value = "user"
-            }
-             Log.e("ACCOUNT TYPE" , accountType.value.toString())
-        } catch (e: Exception) {
-            // Handle exceptions (e.g., log, report, or throw)
+        viewModelScope.launch {
+            _isLoading.value = true
+            Log.d(TAG, "loading data...")
+            fetchEvents().await()
+            fetchArtists().await()
+            fetchEventFounders().await()
+            fetchEventArtists().await()
+            Log.d(TAG, "loading data DONE")
+            _isLoading.value = false
         }
     }
 
-    private fun fetchArtists() {
+    private suspend fun getAccountType(userUUID: String): String {
+        try {
+            val artistSnapshot =
+                artistsCollection.document(userUUID).get().await()
+            val founderSnapshot =
+                eventFounderCollection.document(userUUID).get().await()
+            val userSnapshot = userCollection.document(userUUID).get().await()
+
+            if (artistSnapshot.exists()) {
+                return "artist"
+            } else if (founderSnapshot.exists()) {
+                return "event_founder"
+
+            } else if (userSnapshot.exists()) {
+                return "user"
+            }
+        } catch (e: Exception) {
+            // Handle exceptions (e.g., log, report, or throw)
+        }
+        return ""
+    }
+
+    private fun fetchArtists(): Deferred<Unit> = viewModelScope.async {
         artistsCollection.get()
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -100,7 +114,7 @@ class HomeViewModel : ViewModel() {
             }
     }
 
-    private fun fetchEvents() {
+    private fun fetchEvents(): Deferred<Unit> = viewModelScope.async {
         eventsCollection.get()
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -129,7 +143,7 @@ class HomeViewModel : ViewModel() {
             }
     }
 
-    private fun fetchEventFounders() {
+    private fun fetchEventFounders(): Deferred<Unit> = viewModelScope.async {
         eventFounderCollection.get()
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -141,7 +155,7 @@ class HomeViewModel : ViewModel() {
             }
     }
 
-    private fun fetchEventArtists() {
+    private fun fetchEventArtists(): Deferred<Unit> = viewModelScope.async {
         eventArtistCollection.get()
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -242,5 +256,57 @@ class HomeViewModel : ViewModel() {
             // TODO: Handle exception (e.g., log, report, or throw)
             false
         }
+    }
+
+    suspend fun getUserMapById(userId: String): Pair<String, MutableMap<String, Any>?>? {
+        val db = FirebaseFirestore.getInstance()
+
+        for (collectionName in usersCollectionNames) {
+            try {
+                val documentReference = db.collection(collectionName).document(userId)
+                val snapshot = documentReference.get().await()
+
+                if (snapshot.exists()) {
+                    return Pair(collectionName, snapshot.data)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        return null
+    }
+
+    fun follow(followedUserUUID: String) {
+        TODO("Not yet implemented")
+    }
+
+    fun unfollow(unfollowedUserUUID: String) {
+        TODO("Not yet implemented")
+    }
+
+    suspend fun getUserEvents(userUUID: String): List<Event> {
+        val _accountType = getAccountType(userUUID)
+
+        if (_accountType == "artist"){
+            eventArtistCollection
+                .whereEqualTo("artistUUID", userUUID)
+                .get()
+                .addOnSuccessListener {
+
+                }
+                .addOnFailureListener{
+//                    TODO:implement
+                }
+
+        }else if (_accountType == "event_founder"){
+
+        }else if (_accountType == "user"){
+
+        }
+
+
+
+        return emptyList()
     }
 }

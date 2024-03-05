@@ -73,7 +73,7 @@ fun EventComponent(
     artists: List<Artist>,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel,
-    navController: NavController.Companion,
+    navController: NavController,
 ) {
     var expanded by remember { mutableStateOf(false) }
 

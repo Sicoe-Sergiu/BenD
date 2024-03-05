@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,7 +13,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.bend.components.BottomNavigationBar
 import com.example.bend.components.BottomNavigationItem
@@ -25,12 +23,10 @@ import com.example.bend.view_models.HomeViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     navController: NavController,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel
 ) {
     val events = homeViewModel.events.observeAsState()
 
@@ -72,13 +68,17 @@ fun EventsList(
 
     SwipeRefresh(
         state = swipeRefreshState,
-        onRefresh = homeViewModel::loadData,
+        onRefresh = {
+            homeViewModel.loadData()
+        },
         modifier = Modifier
             .background(Color.White)
     ) {
         LazyColumn(
+            state = homeViewModel.homeScreenScrollState,
             modifier = modifier
-                .background(Color.White)
+                .background(Color.White),
+            userScrollEnabled = true
         ) {
             itemsIndexed(events) { index, event ->
 
@@ -87,7 +87,7 @@ fun EventsList(
                     founder = homeViewModel.getFounderByUUID(event.founderUUID),
                     artists = homeViewModel.getEventArtists(event),
                     viewModel = homeViewModel,
-                    navController = NavController
+                    navController = navController
                 )
                 if (index < events.size - 1) {
                     Divider(

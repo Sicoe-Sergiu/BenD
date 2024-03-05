@@ -31,12 +31,13 @@ import com.example.bend.Constants
 import com.example.bend.ui.theme.Primary
 import com.example.bend.ui.theme.Secondary
 import com.example.bend.ui.theme.green
+import com.google.firebase.auth.FirebaseAuth
 import java.time.LocalTime
 
-enum class BottomNavigationItem(val icon: ImageVector, val route: String ){
+enum class BottomNavigationItem(val icon: ImageVector, val route: String){
     FEED(Icons.Default.Home, Constants.NAVIGATION_HOME_PAGE),
     SEARCH(Icons.Default.Search, Constants.NAVIGATION_SEARCH_PAGE),
-    PROFILE(Icons.Default.Person, Constants.NAVIGATION_PROFILE_PAGE)
+    PROFILE(Icons.Default.Person, Constants.userProfileNavigation(FirebaseAuth.getInstance().uid.toString()))
 }
 @Composable
 fun BottomNavigationBar(

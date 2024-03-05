@@ -1,8 +1,8 @@
 package com.example.bend.ui.screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,30 +41,40 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.bend.R
-import com.example.bend.view_models.ProfileState
-import com.example.bend.view_models.ProfileViewModel
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material.IconButton
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 import coil.compose.AsyncImage
 import com.example.bend.Constants
 import com.example.bend.components.BottomNavigationBar
 import com.example.bend.components.BottomNavigationItem
 import com.example.bend.components.CustomTopBar
+import com.example.bend.model.Event
+import com.example.bend.view_models.HomeViewModel
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    profileViewModel: ProfileViewModel = viewModel()
+    viewModel: HomeViewModel,
+    userUUID: String
 ) {
-    val data = profileViewModel.userData.observeAsState()
+    var userData by remember { mutableStateOf<Pair<String, MutableMap<String, Any>?>>(Pair("", null)) }
+    var userEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
+
+
+
+    LaunchedEffect(key1 = userUUID) {
+        userData = viewModel.getUserMapById(userUUID) ?: Pair("", null)
+        userEvents = viewModel.getUserEvents(userUUID)
+        Log.e("PROFILE USER DATA", userData.toString())
+    }
     var selectedTabIndex by remember {
         mutableStateOf(0)
     }
@@ -80,82 +89,87 @@ fun ProfileScreen(
         },
 
         ) {
-        if (profileViewModel.profileState.value is ProfileState.Success) {
-            val userData = (profileViewModel.profileState.value as ProfileState.Success).userData
 
-            Column(modifier = Modifier.fillMaxSize()) {
-                CustomTopBar(
-                    userData["username"].toString(),
-                    icons = listOf (
-                        {
-                            Icon(
-                                painter = painterResource(id = R.drawable.plus_sym),
-                                contentDescription = "Add event",
-                                tint = Color.Black,
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clickable {
-                                        navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
-                                    }
-                            )
-                        },
-                        {
-                            Icon(
-                                painter = painterResource(id = R.drawable.lines_menu),
-                                contentDescription = "Menu",
-                                tint = Color.Black,
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clickable { //TODO: add click action
-                                    }
-                            )
-                        }
+        Column(modifier = Modifier.fillMaxSize()) {
+            CustomTopBar(
+                {
+                    BackButton {
+                        navController.popBackStack()
+                    }
+                }
+                ,
+                userData.second?.get("username")?.toString() ?: "Default username"
+                ,
+                icons = listOf(
+                    {
+                        Icon(
+                            painter = painterResource(id = R.drawable.plus_sym),
+                            contentDescription = "Add event",
+                            tint = Color.Black,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clickable {
+                                    navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
+                                }
+                        )
+                    },
+                    {
+                        Icon(
+                            painter = painterResource(id = R.drawable.lines_menu),
+                            contentDescription = "Menu",
+                            tint = Color.Black,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clickable { //TODO: add click action
+                                }
+                        )
+                    }
 
-                    ))
-                Spacer(modifier = Modifier.height(10.dp))
-                ProfileSection(userData, profileViewModel)
-                Spacer(modifier = Modifier.height(10.dp))
-                ButtonSection(modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(10.dp))
-                PostTabView(
-                    imageWithTexts = listOf(
-                        ImageWithText(
-                            image = painterResource(id = R.drawable.future),
-                            text = "Posts"
-                        ),
-                        ImageWithText(
-                            image = painterResource(id = R.drawable.time_past),
-                            text = "Reels"
-                        ),
-                    )
-                ) {
-                    selectedTabIndex = it
-                }
-                when (selectedTabIndex) {
-                    0 -> PostSection(
-                        posts = listOf(
-                            painterResource(id = R.drawable.lines_menu),
-                            painterResource(id = R.drawable.baseline_list_alt_24),
-                            painterResource(id = R.drawable.baseline_message_24),
-                            painterResource(id = R.drawable.baseline_face_6_24),
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                ))
+            Spacer(modifier = Modifier.height(10.dp))
+            ProfileSection(userData, viewModel)
+            Spacer(modifier = Modifier.height(10.dp))
+            ButtonSection(modifier = Modifier.fillMaxWidth(),viewModel = viewModel, userUUID = userUUID)
+            Spacer(modifier = Modifier.height(10.dp))
+            PostTabView(
+                imageWithTexts = listOf(
+                    ImageWithText(
+                        image = painterResource(id = R.drawable.future),
+                        text = "Future Events"
+                    ),
+                    ImageWithText(
+                        image = painterResource(id = R.drawable.time_past),
+                        text = "Past Events"
+                    ),
+                )
+            ) {
+                selectedTabIndex = it
             }
-        } else if (profileViewModel.profileState.value is ProfileState.Loading) {
-//            TODO: add loading screen
-            {}
-        } else if (profileViewModel.profileState.value is ProfileState.Error) {
-            val errorMessage =
-                (profileViewModel.profileState.value as ProfileState.Error).errorMessage
-            Text("Error: $errorMessage")
+            when (selectedTabIndex) {
+                0 -> PostSection(
+                    postsURLs = listOf(
+                        ""
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }
-
 @Composable
-fun ProfileSection(userData: Map<String, Any>, profileViewModel: ProfileViewModel) {
+fun BackButton(onBackPressed: () -> Unit) {
+    IconButton(
+        onClick = { onBackPressed() },
+        modifier = Modifier.size(18.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.ArrowBackIosNew,
+            contentDescription = "back button"
+        )
+    }
+}
+@Composable
+fun ProfileSection(userData: Pair<String, MutableMap<String, Any>?>, viewModel: HomeViewModel) {
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -166,8 +180,7 @@ fun ProfileSection(userData: Map<String, Any>, profileViewModel: ProfileViewMode
                 .padding(horizontal = 20.dp)
         ) {
             RoundImage(
-//                TODO:profile photo add
-                imageUrl = "",
+                imageUrl = (userData.second?.get("profilePhotoURL")?.toString() ?: "Default last name"),
                 modifier = Modifier
                     .size(100.dp)
                     .weight(3f)
@@ -176,9 +189,9 @@ fun ProfileSection(userData: Map<String, Any>, profileViewModel: ProfileViewMode
         }
         Spacer(modifier = Modifier.height(10.dp))
         ProfileDescription(
-            displayName = userData["last_name"].toString() + " " + userData["first_name"] + " (" + profileViewModel.accountType + ")",
-            phone = userData["phone"].toString(),
-            email = userData["email"].toString(),
+            displayName = (userData.second?.get("lastName")?.toString() ?: "Default last name") + " " + (userData.second?.get("firstName")?.toString() ?: "Default last name") + " (" + userData.first + ")",
+            phone = (userData.second?.get("phone")?.toString() ?: ""),
+            email = (userData.second?.get("email")?.toString() ?: ""),
         )
     }
 }
@@ -253,11 +266,11 @@ fun RoundImage(
                 shape = CircleShape
             )
             .padding(3.dp)
-            .clip(CircleShape)
-        ,
+            .clip(CircleShape),
         contentScale = ContentScale.Crop
     )
 }
+
 @Composable
 fun RoundImageNoBorder(
     imageURL: String,
@@ -269,8 +282,7 @@ fun RoundImageNoBorder(
         modifier = modifier
             .aspectRatio(1f, matchHeightConstraintsFirst = true)
             .padding(3.dp)
-            .clip(CircleShape)
-        ,
+            .clip(CircleShape),
         contentScale = ContentScale.Crop
     )
 }
@@ -311,7 +323,9 @@ fun ProfileStat(
 
 @Composable
 fun ButtonSection(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel,
+    userUUID: String
 ) {
     val minWidth = 95.dp
     val height = 30.dp
@@ -325,7 +339,7 @@ fun ButtonSection(
                     .defaultMinSize(minWidth = minWidth)
                     .height(height)
                     .clickable {
-                        // Handle the click event for the "Follow" button
+                        viewModel.follow(followedUserUUID = userUUID)
                         isFollowButtonVisible = false
                     }
             )
@@ -336,7 +350,7 @@ fun ButtonSection(
                     .defaultMinSize(minWidth = minWidth)
                     .height(height)
                     .clickable {
-                        // Handle the click event for the "Following" button
+                        viewModel.unfollow(unfollowedUserUUID = userUUID)
                         isFollowButtonVisible = true
                     }
             )
@@ -420,7 +434,7 @@ fun PostTabView(
 @ExperimentalFoundationApi
 @Composable
 fun PostSection(
-    posts: List<Painter>,
+    postsURLs: List<String>,
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -428,17 +442,17 @@ fun PostSection(
         modifier = modifier
             .scale(1.01f)
     ) {
-        items(posts.size) {
-            Image(
-                painter = posts[it],
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
+        items(postsURLs.size) {
+            AsyncImage(
+                model = postsURLs[it],
+                contentDescription = "Event Poster",
                 modifier = Modifier
                     .aspectRatio(1f)
                     .border(
                         width = 1.dp,
                         color = Color.White
-                    )
+                    ),
+                contentScale = ContentScale.FillBounds
             )
         }
     }
