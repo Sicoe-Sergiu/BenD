@@ -32,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +66,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import com.example.bend.Constants
+import com.example.bend.ui.theme.green
 
 @Composable
 fun EventComponent(
@@ -80,16 +85,25 @@ fun EventComponent(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
-            .padding(15.dp)
-            .clip(shape = RoundedCornerShape(16.dp))
+            .background(Color.LightGray)
+            .padding(10.dp)
+            .clip(shape = RoundedCornerShape(10.dp)),
+//            .border(width = 1.dp, green, shape = RoundedCornerShape(10.dp))
+        contentAlignment = Alignment.TopCenter
 
     ) {
         Column(
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(10.dp)
+
+
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
@@ -97,7 +111,7 @@ fun EventComponent(
                     modifier = Modifier
                         .clip(shape = RoundedCornerShape(30.dp))
                         .clickable {
-//                            TODO:click
+                            navController.navigate(Constants.userProfileNavigation(founder?.uuid.toString()))
                         }
                 ) {
                     RoundImage(
@@ -114,7 +128,7 @@ fun EventComponent(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.width(50.dp))
+                Spacer(modifier = Modifier.width(70.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -140,10 +154,15 @@ fun EventComponent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.6f)
-                    .clip(shape = RoundedCornerShape(10.dp)),
+                    .clip(shape = RoundedCornerShape(10.dp))
+                    .border(width = 1.dp, Color.Black, shape = RoundedCornerShape(10.dp))
+
+
+                ,
             )
             Box(
                 modifier = Modifier
+                    .clip(shape = RoundedCornerShape(10.dp))
                     .clickable {
                         expanded = !expanded
                     }
@@ -156,6 +175,7 @@ fun EventComponent(
                     modifier = Modifier
                         .width(60.dp)
                         .height(30.dp)
+
                 ) else Icon(
                     imageVector = Icons.Outlined.KeyboardArrowDown,
                     contentDescription = null,
@@ -253,6 +273,7 @@ fun Poster(posterUrl: String, modifier: Modifier) {
         contentDescription = "poster image",
         modifier = modifier
             .size(400.dp)
+
         ,
         contentScale = ContentScale.FillBounds
     )

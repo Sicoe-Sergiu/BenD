@@ -13,6 +13,7 @@ import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
 import com.example.bend.model.EventFounder
+import com.example.bend.model.Followers
 import com.example.bend.model.User
 import com.example.bend.model.UserEvent
 import com.google.android.gms.tasks.Tasks
@@ -21,11 +22,13 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class HomeViewModel : ViewModel() {
@@ -46,6 +49,8 @@ class HomeViewModel : ViewModel() {
         FirebaseFirestore.getInstance().collection("event_artist")
     private val userEventCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("user_event")
+    private val followersCollection: CollectionReference =
+        FirebaseFirestore.getInstance().collection("followers")
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -63,7 +68,12 @@ class HomeViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             loadData()
-            (accountType as MutableLiveData).postValue(getAccountType(currentUser?.uid.toString()))
+            val type = getAccountType(currentUser?.uid.toString())
+
+            withContext(Dispatchers.Main) {
+                (accountType as MutableLiveData).postValue(type)
+            }
+            Log.e("ACCOUNT VALUE", accountType.value.toString())
         }
     }
 
@@ -86,7 +96,8 @@ class HomeViewModel : ViewModel() {
                 artistsCollection.document(userUUID).get().await()
             val founderSnapshot =
                 eventFounderCollection.document(userUUID).get().await()
-            val userSnapshot = userCollection.document(userUUID).get().await()
+            val userSnapshot =
+                userCollection.document(userUUID).get().await()
 
             if (artistSnapshot.exists()) {
                 return "artist"
@@ -130,7 +141,7 @@ class HomeViewModel : ViewModel() {
 
     private fun fetchEventAttendees(eventsList: List<Event>) {
         val eventTasks = eventsList.map { event ->
-            userEventCollection.whereEqualTo("event", event).get()
+            userEventCollection.whereEqualTo("eventUUID", event.uuid).get()
         }
 
         Tasks.whenAllSuccess<QuerySnapshot>(eventTasks)
@@ -198,7 +209,7 @@ class HomeViewModel : ViewModel() {
             .addOnSuccessListener { documents ->
                 for (document in documents) {
                     val user = document.toObject(User::class.java)
-                    val userEvent = UserEvent(UUID.randomUUID().toString(), user, event)
+                    val userEvent = UserEvent(UUID.randomUUID().toString(), user.uuid, event.uuid)
                     userEventCollection.document(userEvent.uuid)
                         .set(userEvent)
                         .addOnSuccessListener {
@@ -219,8 +230,8 @@ class HomeViewModel : ViewModel() {
     fun removeEventFromUserList(event: Event) {
 
         userEventCollection
-            .whereEqualTo("user.uuid", currentUser?.uid)
-            .whereEqualTo("event.uuid", event.uuid)
+            .whereEqualTo("userUUID", currentUser?.uid)
+            .whereEqualTo("eventUUID", event.uuid)
             .get()
             .addOnSuccessListener { documents ->
                 for (document in documents) {
@@ -246,12 +257,26 @@ class HomeViewModel : ViewModel() {
     suspend fun ifAttend(event: Event): Boolean {
         return try {
             val eventDocuments = userEventCollection
-                .whereEqualTo("event", event)
-                .whereEqualTo("user.uuid", currentUser?.uid)
+                .whereEqualTo("eventUUID", event.uuid)
+                .whereEqualTo("userUUID", currentUser?.uid)
                 .get()
                 .await()
 
             !eventDocuments.isEmpty
+        } catch (e: Exception) {
+            // TODO: Handle exception (e.g., log, report, or throw)
+            false
+        }
+    }
+    suspend fun ifFollow(userUUID: String): Boolean {
+        return try {
+            val followersDocuments = followersCollection
+                .whereEqualTo("userUUID", currentUser?.uid)
+                .whereEqualTo("followedUserUUID", userUUID)
+                .get()
+                .await()
+
+            !followersDocuments.isEmpty
         } catch (e: Exception) {
             // TODO: Handle exception (e.g., log, report, or throw)
             false
@@ -277,36 +302,142 @@ class HomeViewModel : ViewModel() {
         return null
     }
 
-    fun follow(followedUserUUID: String) {
-        TODO("Not yet implemented")
-    }
-
-    fun unfollow(unfollowedUserUUID: String) {
-        TODO("Not yet implemented")
-    }
-
     suspend fun getUserEvents(userUUID: String): List<Event> {
-        val _accountType = getAccountType(userUUID)
 
-        if (_accountType == "artist"){
-            eventArtistCollection
-                .whereEqualTo("artistUUID", userUUID)
-                .get()
-                .addOnSuccessListener {
+        return when (getAccountType(userUUID)) {
+            "artist" -> getArtistEvents(userUUID)
+            "event_founder" -> getFounderEvents(userUUID)
+            "user" -> getRegularUserEvents(userUUID)
+            else -> emptyList()
+        }
+    }
 
+    private suspend fun getRegularUserEvents(userID: String): List<Event> {
+        val events = mutableListOf<Event>()
+
+        try {
+            val eventUserRecords =
+                userEventCollection.whereEqualTo("userUUID", userID).get().await()
+            for (record in eventUserRecords) {
+                val eventUUID = record.getString("eventUUID")
+                val eventRecords = eventsCollection.whereEqualTo("uuid", eventUUID).get().await()
+                for (event in eventRecords) {
+                    events.add(event.toObject(Event::class.java))
                 }
-                .addOnFailureListener{
-//                    TODO:implement
-                }
-
-        }else if (_accountType == "event_founder"){
-
-        }else if (_accountType == "user"){
-
+            }
+        } catch (e: Exception) {
+            // Handle exceptions
+            e.printStackTrace()
         }
 
+        return events
+    }
 
+    private suspend fun getArtistEvents(userID: String): List<Event> {
+        val events = mutableListOf<Event>()
+
+        try {
+            val eventArtistRecords =
+                eventArtistCollection.whereEqualTo("artistUUID", userID).get().await()
+            for (record in eventArtistRecords) {
+                val eventUUID = record.getString("eventUUID")
+                val eventRecords = eventsCollection.whereEqualTo("uuid", eventUUID).get().await()
+                for (event in eventRecords) {
+                    events.add(event.toObject(Event::class.java))
+                }
+            }
+        } catch (e: Exception) {
+            // Handle exceptions
+            e.printStackTrace()
+        }
+
+        return events
+    }
+
+    private suspend fun getFounderEvents(userID: String): List<Event> {
+        try {
+            val task = eventsCollection.whereEqualTo("founderUUID", userID).get().await()
+            return task.toObjects(Event::class.java)
+        } catch (e: Exception) {
+            // Handle exceptions
+            e.printStackTrace()
+        }
 
         return emptyList()
     }
+
+    fun follow(followedUserUUID: String) {
+
+        val follow = Followers(UUID.randomUUID().toString(), currentUser?.uid ?: "", followedUserUUID)
+        followersCollection
+            .document(follow.uuid)
+            .set(follow)
+            .addOnSuccessListener {
+//                TODO:implement
+            }
+            .addOnFailureListener{
+//                TODO:implement
+            }
+
+    }
+
+    fun unfollow(unfollowedUserUUID: String) {
+        followersCollection
+            .whereEqualTo("userUUID", currentUser?.uid)
+            .whereEqualTo("followedUserUUID", unfollowedUserUUID)
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    document.reference.delete()
+                        .addOnSuccessListener {
+//                          TODO:implement
+                        }
+                        .addOnFailureListener { e ->
+//                          TODO:implement
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+//                TODO:implement
+            }
+    }
+
+    suspend fun getUserFollowers(userUUID: String): Int {
+        try {
+            val task = followersCollection.whereEqualTo("followedUserUUID", userUUID).get().await()
+            return task.toObjects(Followers::class.java).size
+        } catch (e: Exception) {
+            // Handle exceptions
+            e.printStackTrace()
+        }
+
+        return 0;
+    }
+
+    suspend fun getUserFollowing(userUUID: String): Int {
+        try {
+            val task = followersCollection.whereEqualTo("userUUID", userUUID).get().await()
+            return task.toObjects(Followers::class.java).size
+        } catch (e: Exception) {
+            // Handle exceptions
+            e.printStackTrace()
+        }
+
+        return 0;
+    }
+
+    suspend fun getEventByUUID(eventUUID:String): Event? {
+        try {
+            val task = eventsCollection.whereEqualTo("uuid", eventUUID).get().await()
+
+            val events =  task.toObjects(Event::class.java)
+            return events[0]
+        } catch (e: Exception) {
+            // Handle exceptions
+            e.printStackTrace()
+        }
+
+        return null
+    }
+
 }

@@ -89,13 +89,7 @@ fun EventsList(
                     viewModel = homeViewModel,
                     navController = navController
                 )
-                if (index < events.size - 1) {
-                    Divider(
-                        color = Color.Gray,
-                        thickness = 1.dp,
-                        modifier = Modifier.padding(horizontal = 150.dp)
-                    )
-                }
+
             }
         }
     }

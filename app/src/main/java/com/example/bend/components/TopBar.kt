@@ -51,7 +51,7 @@ fun CustomTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
 
-                ) {
+                    ) {
                     if (firstIcon != null) {
                         firstIcon()
                         Spacer(modifier = Modifier.width(15.dp))
@@ -64,25 +64,25 @@ fun CustomTopBar(
                     )
                 }
             }
-
-            Box(
-                modifier = Modifier
-                    .weight(5f)
-            ){
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+            if (icons.isNotEmpty())
+                Box(
+                    modifier = Modifier
+                        .weight(5f)
                 ) {
-                    icons.forEachIndexed { index, icon ->
-                        Box(
-                            modifier = Modifier
-                                .padding(start = if (index > 0) 8.dp else 0.dp)
-                        ) {
-                            icon()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        icons.forEachIndexed { index, icon ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = if (index > 0) 8.dp else 0.dp)
+                            ) {
+                                icon()
+                            }
                         }
                     }
                 }
-            }
         }
     }
 }

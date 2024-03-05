@@ -17,9 +17,9 @@ import com.example.bend.ui.screens.CreateEventScreen
 import com.example.bend.ui.screens.FeedScreen
 import com.example.bend.ui.screens.ProfileScreen
 import com.example.bend.ui.screens.SearchScreen
+import com.example.bend.ui.screens.SingleEventScreen
 import com.example.bend.view_models.HomeViewModel
 import com.google.firebase.auth.FirebaseAuth
-import java.util.UUID
 
 
 class MainActivity : ComponentActivity() {
@@ -30,22 +30,34 @@ class MainActivity : ComponentActivity() {
             var startDestination = Constants.NAVIGATION_REGISTER_PAGE
             val firebaseAuth = FirebaseAuth.getInstance()
             val currentUser = firebaseAuth.currentUser
-            val mainViewModel:HomeViewModel = viewModel()
+            val mainViewModel: HomeViewModel = viewModel()
 
-            if (currentUser != null){
+            if (currentUser != null) {
                 startDestination = Constants.NAVIGATION_HOME_PAGE
             }
 
 
-            NavHost(navController = navController, startDestination = Constants.NAVIGATION_HOME_PAGE){
+            NavHost(
+                navController = navController,
+                startDestination = Constants.NAVIGATION_HOME_PAGE
+            ) {
 //                LoginScreen
-                composable(Constants.NAVIGATION_LOGIN_PAGE){SignInScreen(navController = navController)}
+                composable(Constants.NAVIGATION_LOGIN_PAGE) { SignInScreen(navController = navController) }
 //                RegisterScreen
-                composable(Constants.NAVIGATION_REGISTER_PAGE){SignUpScreen(navController = navController)}
+                composable(Constants.NAVIGATION_REGISTER_PAGE) { SignUpScreen(navController = navController) }
 //                ForgotPasswordScreen
-                composable(Constants.NAVIGATION_FORGOT_PASS_PAGE){ResetPasswordScreen(navController = navController)}
+                composable(Constants.NAVIGATION_FORGOT_PASS_PAGE) {
+                    ResetPasswordScreen(
+                        navController = navController
+                    )
+                }
 //                FeedScreen
-                composable(Constants.NAVIGATION_HOME_PAGE){FeedScreen(navController = navController, homeViewModel = mainViewModel)}
+                composable(Constants.NAVIGATION_HOME_PAGE) {
+                    FeedScreen(
+                        navController = navController,
+                        homeViewModel = mainViewModel
+                    )
+                }
 //                ProfileScreen
                 composable(
                     Constants.NAVIGATION_PROFILE_PAGE,
@@ -53,17 +65,36 @@ class MainActivity : ComponentActivity() {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val userId = backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
+                    val userId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
                     if (userId != null) {
-                        ProfileScreen(userUUID = userId, navController = navController,
+                        ProfileScreen(
+                            userUUID = userId, navController = navController,
                             viewModel = mainViewModel
                         )
                     }
                 }
+//                SingleEventScreen
+                composable(
+                    Constants.NAVIGATION_SINGLE_EVENT_PAGE,
+                    arguments = listOf(navArgument(Constants.NAVIGATION_EVENT_UUID_ARGUMENT) {
+                        type = NavType.StringType
+                    })
+                ) { backStackEntry ->
+                    val eventId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    if (eventId != null) {
+                        SingleEventScreen(
+                            eventUUID = eventId,
+                            viewModel = mainViewModel,
+                            navController = navController
+                        )
+                    }
+                }
 //                SearchScreen
-                composable(Constants.NAVIGATION_SEARCH_PAGE){SearchScreen(navController = navController)}
+                composable(Constants.NAVIGATION_SEARCH_PAGE) { SearchScreen(navController = navController) }
 //                CreateEventScreen
-                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE){ CreateEventScreen(navController = navController) }
+                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE) { CreateEventScreen(navController = navController) }
             }
         }
     }

@@ -2,8 +2,8 @@ package com.example.bend.model
 
 data class UserEvent (
     val uuid: String,
-    val user:User,
-    val event:Event
+    val userUUID:String,
+    val eventUUID:String
 ){
-    constructor() : this("", User(), Event())
+    constructor() : this("", "", "")
 }
