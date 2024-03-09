@@ -14,11 +14,14 @@ import com.example.bend.register_login.ResetPasswordScreen
 import com.example.bend.register_login.SignInScreen
 import com.example.bend.register_login.SignUpScreen
 import com.example.bend.ui.screens.CreateEventScreen
+import com.example.bend.ui.screens.EditEventScreen
 import com.example.bend.ui.screens.FeedScreen
+import com.example.bend.ui.screens.MyEventsScreen
 import com.example.bend.ui.screens.ProfileScreen
 import com.example.bend.ui.screens.SearchScreen
 import com.example.bend.ui.screens.SingleEventScreen
 import com.example.bend.view_models.HomeViewModel
+import com.example.bend.view_models.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 
@@ -31,6 +34,7 @@ class MainActivity : ComponentActivity() {
             val firebaseAuth = FirebaseAuth.getInstance()
             val currentUser = firebaseAuth.currentUser
             val mainViewModel: HomeViewModel = viewModel()
+            val profileViewModel: ProfileViewModel = viewModel()
 
             if (currentUser != null) {
                 startDestination = Constants.NAVIGATION_HOME_PAGE
@@ -70,7 +74,7 @@ class MainActivity : ComponentActivity() {
                     if (userId != null) {
                         ProfileScreen(
                             userUUID = userId, navController = navController,
-                            viewModel = mainViewModel
+                            viewModel = profileViewModel
                         )
                     }
                 }
@@ -91,10 +95,33 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+//                editEventScreen
+                composable(
+                    Constants.NAVIGATION_EDIT_EVENT_PAGE,
+                    arguments = listOf(navArgument(Constants.NAVIGATION_EVENT_UUID_ARGUMENT) {
+                        type = NavType.StringType
+                    })
+                ) { backStackEntry ->
+                    val eventId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    if (eventId != null) {
+                        EditEventScreen(
+                            eventUUID = eventId,
+                            navController = navController
+                        )
+                    }
+                }
 //                SearchScreen
                 composable(Constants.NAVIGATION_SEARCH_PAGE) { SearchScreen(navController = navController) }
 //                CreateEventScreen
                 composable(Constants.NAVIGATION_CREATE_EVENT_PAGE) { CreateEventScreen(navController = navController) }
+//                MyEventsScreen
+                composable(Constants.NAVIGATION_MY_EVENTS) {
+                    MyEventsScreen(
+                        navController = navController
+
+                    )
+                }
             }
         }
     }

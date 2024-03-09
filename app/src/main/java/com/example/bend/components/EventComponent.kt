@@ -1,7 +1,7 @@
 package com.example.bend.components
 
-import android.view.Gravity
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
-import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
@@ -32,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,16 +55,10 @@ import com.example.bend.model.Artist
 import com.example.bend.model.EventFounder
 import com.example.bend.ui.screens.RoundImage
 import com.example.bend.ui.screens.RoundImageNoBorder
-import com.example.bend.ui.theme.PrimaryText
 import com.example.bend.view_models.HomeViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import com.example.bend.Constants
-import com.example.bend.ui.theme.green
 
 @Composable
 fun EventComponent(
@@ -84,252 +73,194 @@ fun EventComponent(
 
     Box(
         modifier = modifier
-            .fillMaxSize()
             .background(Color.LightGray)
             .padding(10.dp)
-            .clip(shape = RoundedCornerShape(10.dp)),
-//            .border(width = 1.dp, green, shape = RoundedCornerShape(10.dp))
-        contentAlignment = Alignment.TopCenter
-
+            .clip(shape = RoundedCornerShape(10.dp))
     ) {
         Column(
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = modifier
-                .fillMaxSize()
+            modifier = Modifier
                 .background(Color.White)
-                .padding(10.dp)
-
-
+                .padding(10.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(shape = RoundedCornerShape(30.dp))
-                        .clickable {
-                            navController.navigate(Constants.userProfileNavigation(founder?.uuid.toString()))
-                        }
-                ) {
-                    RoundImage(
-                        imageUrl = founder?.profilePhotoURL ?: "",
-                        modifier = Modifier
-                            .size(50.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = founder?.username ?: "",
-                        modifier = Modifier,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Spacer(modifier = Modifier.width(70.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.calendar),
-                        contentDescription = "calendar icon",
-                        modifier = Modifier.size(20.dp)
-
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = event.startDate,
-                        modifier = Modifier,
-                        fontWeight = FontWeight.Light,
-                        fontSize = 20.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Poster(
+            EventHeader(event, founder, navController)
+            Spacer(modifier = Modifier.height(10.dp))
+            EventPoster(
                 posterUrl = event.posterDownloadLink,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.6f)
+                    .height(400.dp)
                     .clip(shape = RoundedCornerShape(10.dp))
                     .border(width = 1.dp, Color.Black, shape = RoundedCornerShape(10.dp))
-
-
-                ,
             )
-            Box(
-                modifier = Modifier
-                    .clip(shape = RoundedCornerShape(10.dp))
-                    .clickable {
-                        expanded = !expanded
-                    }
-            )
-            {
-                if (expanded) Icon(
-                    imageVector = Icons.Outlined.KeyboardArrowUp,
-                    contentDescription = null,
-                    tint = PrimaryText,
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(30.dp)
-
-                ) else Icon(
-                    imageVector = Icons.Outlined.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = PrimaryText,
-                    modifier = Modifier
-                        .width(60.dp)
-                        .height(30.dp)
-
-                )
-            }
-
+            ExpandIcon(expanded) { expanded = !expanded }
             if (expanded) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.location),
-                                contentDescription = "location icon",
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .height(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = event.location,
-                                modifier = Modifier,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 20.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.baseline_access_time_24),
-                                contentDescription = "money icon",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = event.startTime + " - " + event.endTime,
-                                modifier = Modifier,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 20.sp
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.money),
-                            contentDescription = "money icon",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = event.entranceFee.toString(),
-                            modifier = Modifier,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 20.sp
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = "RON",
-                            modifier = Modifier,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                }
-                ArtistsSection(artists)
-                Spacer(modifier = Modifier.height(5.dp))
+                EventDetails(event, artists, navController = navController)
             }
             ActionBarEvent(viewModel = viewModel, event = event)
         }
     }
-
 }
 
 @Composable
-fun Poster(posterUrl: String, modifier: Modifier) {
+fun EventHeader(
+    event: Event,
+    founder: EventFounder?,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FounderProfile(founder, navController)
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        EventDate(event.startDate)
+    }
+}
+
+@Composable
+fun FounderProfile(founder: EventFounder?, navController: NavController) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(shape = RoundedCornerShape(30.dp))
+            .clickable { navController.navigate(Constants.userProfileNavigation(founder?.uuid ?: "Invalid profile UUID") )}
+
+    ) {
+        RoundImage(
+            imageUrl = founder?.profilePhotoURL ?: "",
+            modifier = Modifier.size(50.dp)
+        )
+        Spacer(modifier = Modifier.width(5.dp))
+        Text(
+            text = founder?.username ?: "",
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            modifier = Modifier.width(140.dp),
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+fun EventDate(date: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(id = R.drawable.calendar),
+            contentDescription = "calendar icon",
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(5.dp))
+        Text(
+            text = date,
+            fontWeight = FontWeight.Light,
+            fontSize = 20.sp
+        )
+    }
+}
+
+@Composable
+fun ExpandIcon(expanded: Boolean, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(25.dp)
+    ) {
+        Icon(
+            imageVector = if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+            contentDescription = "Toggle expanded",
+            tint = Color.Gray
+        )
+    }
+}
+
+@Composable
+fun EventPoster(posterUrl: String, modifier: Modifier) {
     AsyncImage(
         model = posterUrl,
         contentDescription = "poster image",
-        modifier = modifier
-            .size(400.dp)
-
-        ,
+        modifier = modifier,
         contentScale = ContentScale.FillBounds
     )
 }
 
 @Composable
-fun ArtistsSection(
-    artists: List<Artist>
-) {
+fun EventDetails(event: Event, artists: List<Artist>, navController: NavController) {
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        DetailItem(icon = R.drawable.location, text = event.location)
+        DetailItem(
+            icon = R.drawable.baseline_access_time_24,
+            text = "${event.startTime} - ${event.endTime}"
+        )
+        DetailItem(icon = R.drawable.money, text = "${event.entranceFee} RON")
+
+        ArtistsSection(artists = artists, navController = navController)
+    }
+}
+@Composable
+fun DetailItem(@DrawableRes icon: Int, text: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 1.dp)
     ) {
+        Icon(
+            painter = painterResource(id = icon),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = text,
+            fontWeight = FontWeight.Normal,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
+fun ArtistsSection(artists: List<Artist>, navController: NavController) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Image(
             painter = painterResource(id = R.drawable.people),
             contentDescription = "artists icon",
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(5.dp))
-        if (artists.size > 1)
-            Text(
-                text = "Artists:",
-                modifier = Modifier,
-                fontWeight = FontWeight.Normal,
-                fontSize = 20.sp
-            )
-        else
-            Text(
-                text = "Artist:",
-                modifier = Modifier,
-                fontWeight = FontWeight.Normal,
-                fontSize = 20.sp
-            )
+        Text(
+            text = if (artists.size > 1) "Artists:" else "Artist:",
+            fontWeight = FontWeight.Normal,
+            fontSize = 18.sp
+        )
     }
-    ArtistsComponentList(artists = artists)
+    ArtistsComponentList(artists = artists, navController = navController)
 }
 
 @Composable
-fun ArtistsComponentList(
-    artists: List<Artist>
-) {
+fun ArtistsComponentList(artists: List<Artist>, navController: NavController) {
     val chunkedArtists = artists.chunked(3)
     chunkedArtists.forEach { artistChunk ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(5.dp),
-            horizontalArrangement = Arrangement.Center,
-
-            ) {
+            horizontalArrangement = Arrangement.Center
+        ) {
             artistChunk.forEach { artist ->
                 ArtistComponent(
                     modifier = Modifier
                         .widthIn(max = 122.dp)
-                        .padding(horizontal = 4.dp)
-                    ,
-                    artist = artist
+                        .padding(horizontal = 4.dp),
+                    artist = artist,
+                    navController = navController
                 )
             }
         }
@@ -337,31 +268,17 @@ fun ArtistsComponentList(
 }
 
 @Composable
-fun ArtistComponent(
-    modifier: Modifier,
-    artist: Artist
-) {
+fun ArtistComponent(modifier: Modifier, artist: Artist, navController: NavController) {
     Row(
         modifier = modifier
             .background(Color.White)
-            .clip(
-                RoundedCornerShape(
-                    topStart = CornerSize(16.dp),
-                    bottomStart = CornerSize(16.dp),
-                    topEnd = CornerSize(16.dp),
-                    bottomEnd = CornerSize(16.dp)
-                )
-            )
-            .clickable {
-//              TODO:navigate to artist profile
-            }
-            .border(
-                width = 2.dp,
-                color = Color.Black,
-                shape = CircleShape
-            )
+            .clip(RoundedCornerShape(16.dp))
+            .border(width = 2.dp, color = Color.Black, shape = CircleShape)
             .height(40.dp)
-            .padding(3.dp),
+            .padding(3.dp)
+            .clickable { navController.navigate(Constants.userProfileNavigation(artist.uuid))}
+
+        ,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RoundImageNoBorder(
@@ -372,7 +289,8 @@ fun ArtistComponent(
         )
         Text(
             text = artist.stageName,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp,
             modifier = Modifier
                 .align(Alignment.CenterVertically)
                 .weight(0.7f),
@@ -383,122 +301,128 @@ fun ArtistComponent(
 }
 
 @Composable
-fun showToast(context: android.content.Context, message: String) {
-    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-}
-
-@Composable
 fun ActionBarEvent(
-    viewModel:HomeViewModel,
+    viewModel: HomeViewModel,
     event: Event
 ) {
     var attend by remember { mutableStateOf(false) }
-    var showMessage by remember { mutableStateOf(false) }
-    var toastMessage by remember { mutableStateOf("false") }
     var showConfirmationDialog by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
-    if (showMessage) {
-        showToast(context = context, message = toastMessage)
-        showMessage = false
-    }
+
+    val operationMessage by viewModel.operationCompletedMessage.observeAsState()
+
     LaunchedEffect(key1 = event) {
         attend = viewModel.ifAttend(event)
     }
-    val eventAttendees = viewModel.eventsAttendees.observeAsState()
+
+    LaunchedEffect(operationMessage) {
+        operationMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.operationCompletedMessage.value = null
+        }
+    }
 
     if (showConfirmationDialog) {
-        AlertDialog(
-            text = {
-                Text(
-                    text = "Are you sure you want to repost this for all your followers?",
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
-                        .wrapContentHeight(Alignment.CenterVertically)
-                )
-            },
-            onDismissRequest = {
+        ConfirmationDialog(
+            text = "Are you sure you want to repost this for all your followers?",
+            onConfirm = {
+                viewModel.repostEvent(event)
                 showConfirmationDialog = false
             },
-            buttons = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        onClick = {
-                            showConfirmationDialog = false
-                        },
-                        modifier = Modifier.padding(end = 8.dp),
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
-                    ) {
-                        Text("Cancel")
-                    }
-                    TextButton(
-                        onClick = {
-                            viewModel.repostEvent(event)
-                            showConfirmationDialog = false
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Green)
-                    ) {
-                        Text("Confirm")
-                    }
-                }
-            }
+            onDismiss = { showConfirmationDialog = false }
         )
     }
+
+    ActionBarLayout(
+        attend = attend,
+        onAttendClick = {
+            attend = !attend
+            if (attend) {
+                viewModel.addEventToUserList(event)
+            } else {
+                viewModel.removeEventFromUserList(event)
+            }
+        },
+        attendeesCount = viewModel.eventsAttendees.observeAsState().value?.find { it.first == event }?.second ?: 0,
+        onRepostClick = { showConfirmationDialog = true },
+        enabled = viewModel.accountType.value == "user"
+    )
+}
+
+
+@Composable
+fun ActionBarLayout(
+    attend: Boolean,
+    onAttendClick: () -> Unit,
+    attendeesCount: Int,
+    onRepostClick: () -> Unit,
+    enabled: Boolean
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, Color.Black, shape = RoundedCornerShape(16.dp))
-            .background(
-                color = Color.White,
-                shape = RoundedCornerShape(16.dp),
-            ),
+            .background(color = Color.White, shape = RoundedCornerShape(16.dp)),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+        // Attend/Unattend Button
         MyIconButton(
             painter = painterResource(
-                if (attend) {
-                    R.drawable.attend_checked
-                } else {
-                    R.drawable.attend_uncheckedpng
-                }
+                id = if (attend) R.drawable.attend_checked else R.drawable.attend_uncheckedpng
             ),
-            onClick = {
-                if (attend) {
-                    viewModel.removeEventFromUserList(event)
-                    toastMessage = "Event removed from your list."
-                    showMessage = true
-                } else {
-                    viewModel.addEventToUserList(event)
-                    toastMessage = "Event added to your list."
-                    showMessage = true
-                }
-                attend = !attend
-            },
+            onClick = onAttendClick,
             modifier = Modifier,
-            enable = if (viewModel.accountType.value == "user") true else false
+            enabled = enabled
         )
+
+        // Attendees Count
         Text(
-            text = (eventAttendees.value?.find { it.first == event }?.second ?: 0).toString() + " People Attend",
+            text = "$attendeesCount People Attend",
             fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .align(Alignment.CenterVertically),
+            modifier = Modifier.align(Alignment.CenterVertically),
             maxLines = 1
         )
 
+        // Repost Button
         MyIconButton(
             painter = painterResource(id = R.drawable.repost),
-            onClick = {
-                showConfirmationDialog = true
-            },
+            onClick = onRepostClick,
             modifier = Modifier,
-            enable = true
+            enabled = true // Assuming repost is always enabled, adjust as necessary
         )
     }
+}
+
+@Composable
+fun ConfirmationDialog(text:String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        text = {
+            Text(
+                text = text,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .wrapContentHeight(Alignment.CenterVertically)
+            )
+        },
+        onDismissRequest = onDismiss,
+        buttons = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel", color = Color.Red)
+                }
+                TextButton(onClick = onConfirm) {
+                    Text("Confirm", color = Color.Green)
+                }
+            }
+        }
+    )
 }
 
 
@@ -506,31 +430,22 @@ fun ActionBarEvent(
 fun MyIconButton(
     onClick: () -> Unit,
     painter: Painter,
-    modifier: Modifier,
-    enable: Boolean
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
+    val alpha = if (enabled) 1f else 0.5f
     IconButton(
-        onClick = { if (enable) onClick.invoke() },
+        onClick = onClick,
         modifier = modifier
-            .clip(
-                RoundedCornerShape(
-                    topStart = CornerSize(16.dp),
-                    bottomStart = CornerSize(16.dp),
-                    topEnd = CornerSize(16.dp),
-                    bottomEnd = CornerSize(16.dp)
-                )
-            )
-            .clickable { if (enable) onClick.invoke() }
+            .clip(RoundedCornerShape(16.dp))
             .padding(5.dp)
-            .then(if (enable) Modifier else Modifier.alpha(0f)),
-
-        content = {
-            Image(
-                painter = painter,
-                contentDescription = null,
-                modifier = Modifier.size(30.dp)
-            )
-        },
-        enabled = enable,
+            .alpha(alpha),
+        enabled = enabled
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            modifier = Modifier.size(30.dp)
         )
+    }
 }

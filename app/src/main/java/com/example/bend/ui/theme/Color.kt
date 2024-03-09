@@ -8,7 +8,7 @@ val DarkPrimaryColor = Color(0xFF4f5b66)
 val LightPrimaryColor = Color(0xFFa7adba)
 val Text_Icons = Color(0xFFf3eeea)
 val PrimaryText = Color(0xFF343d46)
-val SecondaryText = Color(0xFFc0c5ce)
+val LightRed = Color(0xFFF82F2F)
 val green = Color(0xFF88DF31)
 val black = Color(0xFF000000)
 

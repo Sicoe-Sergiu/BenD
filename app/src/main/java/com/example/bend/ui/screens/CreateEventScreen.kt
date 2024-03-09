@@ -86,7 +86,7 @@ fun CreateEventScreen(
     Scaffold(
         topBar = {
             CustomTopBar(
-                name = "BenD",
+                text = "BenD",
                 icons = listOf {
                 })
         },

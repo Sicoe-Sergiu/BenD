@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.Divider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,7 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bend.components.BottomNavigationBar
 import com.example.bend.components.BottomNavigationItem
@@ -33,7 +31,7 @@ fun FeedScreen(
     Scaffold(
         topBar = {
             CustomTopBar(
-                name = "BenD",
+                text = "BenD",
                 icons = listOf {
                 })
         },
@@ -82,12 +80,13 @@ fun EventsList(
         ) {
             itemsIndexed(events) { index, event ->
 
+
                 EventComponent(
                     event = event,
                     founder = homeViewModel.getFounderByUUID(event.founderUUID),
                     artists = homeViewModel.getEventArtists(event),
                     viewModel = homeViewModel,
-                    navController = navController
+                    navController = navController,
                 )
 
             }

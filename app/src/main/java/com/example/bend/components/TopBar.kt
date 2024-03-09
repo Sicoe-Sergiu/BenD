@@ -13,18 +13,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bend.ui.theme.Primary
 import com.example.bend.ui.theme.Secondary
+import com.example.bend.ui.theme.green
 
 @Composable
 fun CustomTopBar(
     firstIcon: @Composable() (() -> Unit)? = null,
-    name: String,
+    text: String,
     icons: List<@Composable () -> Unit> = emptyList()
 ) {
     Box(
@@ -33,6 +37,15 @@ fun CustomTopBar(
             .background(
                 brush = Brush.horizontalGradient(listOf(Secondary, Primary)),
             )
+            .drawWithContent {
+                drawContent()
+                drawLine(
+                    color = green,
+                    start = Offset(0f, size.height), // Start at the bottom left corner
+                    end = Offset(size.width, size.height), // End at the bottom right corner
+                    strokeWidth = 1.dp.toPx() // Specify the thickness of the line
+                )
+            }
     ) {
 
         Row(
@@ -57,7 +70,7 @@ fun CustomTopBar(
                         Spacer(modifier = Modifier.width(15.dp))
                     }
                     Text(
-                        text = name,
+                        text = text,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Bold,
                         fontSize = 25.sp,
