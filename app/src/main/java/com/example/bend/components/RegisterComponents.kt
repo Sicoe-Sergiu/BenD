@@ -144,11 +144,12 @@ fun MyPasswordFieldComponent(
 @Composable
 fun MyTextFieldComponent(
     labelValue:String,
+    initialValue: String = "",
     onTextSelected: (String) -> Unit,
     errorStatus:Boolean = false
 ){
     val textValue = remember {
-        mutableStateOf("")
+        mutableStateOf(initialValue)
     }
 
     OutlinedTextField(

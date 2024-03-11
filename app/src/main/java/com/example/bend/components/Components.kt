@@ -1,59 +1,36 @@
 package com.example.bend.components
 
-import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconToggleButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.bend.model.Artist
 import com.example.bend.ui.theme.PrimaryText
 import com.example.bend.ui.theme.Secondary
 import com.example.bend.ui.theme.green
@@ -66,10 +43,10 @@ import java.time.LocalTime
 
 @Composable
 fun AddPosterButton(
-    value:String,
-    onButtonClicked : () -> Unit,
-    isEnabled:Boolean = false
-){
+    value: String,
+    onButtonClicked: () -> Unit,
+    isEnabled: Boolean = false
+) {
     Button(
         onClick = { onButtonClicked.invoke() },
         modifier = Modifier
@@ -78,14 +55,13 @@ fun AddPosterButton(
             .shadow(
                 25.dp,
                 shape = RoundedCornerShape(50.dp),
-            )
-        ,
+            ),
         contentPadding = PaddingValues(),
         colors = ButtonDefaults.buttonColors(Color.Transparent),
         enabled = isEnabled,
 
 
-    ) {
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -95,7 +71,7 @@ fun AddPosterButton(
                 )
                 .heightIn(48.dp),
             contentAlignment = Alignment.Center
-        ){
+        ) {
             Text(
                 text = value,
                 fontSize = 16.sp,
@@ -105,16 +81,18 @@ fun AddPosterButton(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyNumberPickerComponent(
     labelValue: String,
     onNumberSelected: (Int) -> Unit,
     errorStatus: Boolean = false,
-    modifier: Modifier
+    modifier: Modifier,
+    initialValue: Int = 0
 ) {
     val numberValue = remember {
-        mutableStateOf(0)
+        mutableStateOf(initialValue)
     }
 
     OutlinedTextField(
@@ -144,15 +122,17 @@ fun MyNumberPickerComponent(
         // TODO: leading icon
     )
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePicker(
-    labelValue:String,
+    labelValue: String,
     onTextSelected: (LocalDate) -> Unit,
-    errorStatus:Boolean = false,
-    graterThan : LocalDate?
+    errorStatus: Boolean = false,
+    graterThan: LocalDate?,
+    initialValue: LocalDate?
 
-){
+) {
 
     var pickedDate by remember {
         mutableStateOf(LocalDate.now())
@@ -165,16 +145,17 @@ fun DatePicker(
 
     OutlinedTextField(
         modifier = Modifier
-            .fillMaxWidth()
-        ,
-        label = {Text(text = labelValue)},
+            .fillMaxWidth(),
+        label = { Text(text = labelValue) },
         colors = TextFieldDefaults.outlinedTextFieldColors(
             focusedBorderColor = PrimaryText,
             focusedLabelColor = PrimaryText,
             cursorColor = PrimaryText,
         ),
         keyboardOptions = KeyboardOptions.Default,
-        value = if (defaultDate)pickedDate.toString() else "",
+        value = if (defaultDate) pickedDate.toString() else {
+            initialValue?.toString() ?: ""
+        },
         onValueChange = {},
         readOnly = true,
         singleLine = true,
@@ -216,13 +197,15 @@ fun DatePicker(
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePicker(
-    labelValue:String,
+    labelValue: String,
     onTextSelected: (LocalTime) -> Unit,
-    errorStatus:Boolean = false
-){
+    errorStatus: Boolean = false,
+    initialValue: LocalTime?
+) {
 
     var pickedTime by remember {
         mutableStateOf(LocalTime.NOON)
@@ -235,16 +218,17 @@ fun TimePicker(
 
     OutlinedTextField(
         modifier = Modifier
-            .fillMaxWidth()
-        ,
-        label = {Text(text = labelValue)},
+            .fillMaxWidth(),
+        label = { Text(text = labelValue) },
         colors = TextFieldDefaults.outlinedTextFieldColors(
             focusedBorderColor = PrimaryText,
             focusedLabelColor = PrimaryText,
             cursorColor = PrimaryText,
         ),
         keyboardOptions = KeyboardOptions.Default,
-        value = if (defaultTime)pickedTime.toString() else "",
+        value = if (defaultTime) pickedTime.toString() else {
+            initialValue?.toString() ?: ""
+        },
         onValueChange = {},
         readOnly = true,
         singleLine = true,

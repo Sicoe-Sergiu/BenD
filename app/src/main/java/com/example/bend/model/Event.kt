@@ -12,7 +12,8 @@ data class Event(
     val endDate: String,
     val startTime: String,
     val endTime: String,
-    val artistStageNames: List<String>,
+//    val artistStageNames: List<String>,
+//    val artistStageNames: List<Artist>,
     val creationTimestamp: Long
 ){
     constructor() : this(
@@ -25,7 +26,7 @@ data class Event(
         "",
         "",
         "",
-        emptyList(),
+//        emptyList(),
         System.currentTimeMillis()
     )
 }

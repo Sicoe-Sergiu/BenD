@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
-class MyEventsViewModel: ViewModel() {
+class MyEventsViewModel : ViewModel() {
     val TAG = "MyEventViewModel"
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
@@ -132,6 +132,7 @@ class MyEventsViewModel: ViewModel() {
 
         return emptyList()
     }
+
     private suspend fun getAccountType(userUUID: String): String = coroutineScope {
         try {
             val artistSnapshotDeferred =
@@ -159,9 +160,8 @@ class MyEventsViewModel: ViewModel() {
     }
 
     suspend fun getEventFounderByUuid(uuid: String): EventFounder? {
-        val db = FirebaseFirestore.getInstance()
         try {
-            val documents = db.collection("event_founder")
+            val documents = eventFounderCollection
                 .whereEqualTo("uuid", uuid)
                 .get()
                 .await()
@@ -181,8 +181,91 @@ class MyEventsViewModel: ViewModel() {
         return null
     }
 
-    fun removeEvent(event: Event) {
-        TODO("Not yet implemented")
+    suspend fun removeEvent(event: Event) {
+        when (accountType.value) {
+            "artist" -> {
+                deleteFromEventArtist(event.uuid, currentUser?.uid)
+            }
+
+            "user" -> {
+                deleteFromEventUser(event.uuid, currentUser?.uid)
+            }
+
+            "event_founder" -> {
+                deleteEvent(event.uuid, currentUser?.uid)
+            }
+        }
+
     }
+
+    private suspend fun deleteFromEventArtist(eventUUID: String, artistUUID: String? = null){
+        try {
+            val query = if (artistUUID != null) {
+                eventArtistCollection
+                    .whereEqualTo("artistUUID", artistUUID)
+                    .whereEqualTo("eventUUID", eventUUID)
+            } else {
+                eventArtistCollection
+                    .whereEqualTo("eventUUID", eventUUID)
+            }
+
+            val documents = query.get().await()
+
+            documents.forEach { document ->
+                eventArtistCollection.document(document.id).delete().await()
+            }
+
+            println("All matching documents successfully deleted.")
+            loadMyEvents()
+        } catch (e: Exception) {
+            println("Error deleting documents: ${e.message}")
+        }
+    }
+
+    private suspend fun deleteFromEventUser(eventUUID: String, userUUID: String? = null){
+        try {
+            val query = if (userUUID != null) {
+                userEventCollection
+                    .whereEqualTo("userUUID", userUUID)
+                    .whereEqualTo("eventUUID", eventUUID)
+            } else {
+                userEventCollection
+                    .whereEqualTo("eventUUID", eventUUID)
+            }
+
+            val documents = query.get().await()
+
+            documents.forEach { document ->
+                userEventCollection.document(document.id).delete().await()
+            }
+
+            println("All matching documents successfully deleted.")
+            loadMyEvents()
+        } catch (e: Exception) {
+            println("Error deleting documents: ${e.message}")
+        }
+    }
+
+    private suspend fun deleteEvent(eventUUID: String, userUUID: String?) {
+        try {
+            val documents = eventsCollection
+                .whereEqualTo("founderUUID", userUUID)
+                .whereEqualTo("uuid", eventUUID)
+                .get()
+                .await()
+
+            documents.forEach { document ->
+                eventsCollection.document(document.id).delete().await()
+                deleteFromEventUser(document.id)
+                deleteFromEventArtist(document.id)
+            }
+
+            println("All matching documents successfully deleted.")
+            loadMyEvents()
+        } catch (e: Exception) {
+            println("Error deleting documents: ${e.message}")
+        }
+    }
+
 
 }

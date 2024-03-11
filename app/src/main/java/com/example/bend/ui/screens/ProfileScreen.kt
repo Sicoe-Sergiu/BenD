@@ -66,11 +66,10 @@ import kotlinx.coroutines.awaitAll
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel ,
+    viewModel: ProfileViewModel,
     userUUID: String
 ) {
     Scaffold(
@@ -106,17 +105,16 @@ fun ProfileTopBar(navController: NavController, userUUID: String) {
         userData.second?.get("username")?.toString() ?: "Default username",
         icons = listOf(
             {
-                if (Firebase.auth.currentUser?.uid.toString() == userUUID && userData.first == "event_founder")
-                    Icon(
-                        painter = painterResource(id = R.drawable.plus_sym),
-                        contentDescription = "Add event",
-                        tint = Color.Black,
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clickable {
-                                navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
-                            }
-                    )
+                Icon(
+                    painter = painterResource(id = R.drawable.plus_sym),
+                    contentDescription = "Add event",
+                    tint = Color.Black,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable {
+                            navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
+                        }
+                )
             },
             {
                 Icon(
@@ -161,7 +159,12 @@ fun ProfileContent(
         val userFollowersDeferred = async { viewModel.getUserFollowers(userUUID) }
         val userFollowingDeferred = async { viewModel.getUserFollowing(userUUID) }
 
-        val results = awaitAll(userDataDeferred, userEventsDeferred, userFollowingDeferred, userFollowersDeferred)
+        val results = awaitAll(
+            userDataDeferred,
+            userEventsDeferred,
+            userFollowingDeferred,
+            userFollowersDeferred
+        )
 
         userData = results[0] as Pair<String, MutableMap<String, Any>?>
         userEvents = results[1] as List<Event>
@@ -307,8 +310,7 @@ fun ButtonSection(
             .padding(
                 horizontal = 20.dp
             )
-            .fillMaxWidth()
-        ,
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.Center
 
     ) {

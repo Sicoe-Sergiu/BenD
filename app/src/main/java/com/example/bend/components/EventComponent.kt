@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.IconButton
@@ -131,7 +130,13 @@ fun FounderProfile(founder: EventFounder?, navController: NavController) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(shape = RoundedCornerShape(30.dp))
-            .clickable { navController.navigate(Constants.userProfileNavigation(founder?.uuid ?: "Invalid profile UUID") )}
+            .clickable {
+                navController.navigate(
+                    Constants.userProfileNavigation(
+                        founder?.uuid ?: "Invalid profile UUID"
+                    )
+                )
+            }
 
     ) {
         RoundImage(
@@ -207,6 +212,7 @@ fun EventDetails(event: Event, artists: List<Artist>, navController: NavControll
         ArtistsSection(artists = artists, navController = navController)
     }
 }
+
 @Composable
 fun DetailItem(@DrawableRes icon: Int, text: String) {
     Row(
@@ -268,17 +274,15 @@ fun ArtistsComponentList(artists: List<Artist>, navController: NavController) {
 }
 
 @Composable
-fun ArtistComponent(modifier: Modifier, artist: Artist, navController: NavController) {
+fun ArtistComponent(modifier: Modifier = Modifier, artist: Artist, navController: NavController? = null) {
     Row(
         modifier = modifier
             .background(Color.White)
             .clip(RoundedCornerShape(16.dp))
-            .border(width = 2.dp, color = Color.Black, shape = CircleShape)
+            .border(width = 1.dp, color = Color.Black, shape = CircleShape)
             .height(40.dp)
             .padding(3.dp)
-            .clickable { navController.navigate(Constants.userProfileNavigation(artist.uuid))}
-
-        ,
+            .clickable { navController?.navigate(Constants.userProfileNavigation(artist.uuid)) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RoundImageNoBorder(
@@ -344,7 +348,8 @@ fun ActionBarEvent(
                 viewModel.removeEventFromUserList(event)
             }
         },
-        attendeesCount = viewModel.eventsAttendees.observeAsState().value?.find { it.first == event }?.second ?: 0,
+        attendeesCount = viewModel.eventsAttendees.observeAsState().value?.find { it.first == event }?.second
+            ?: 0,
         onRepostClick = { showConfirmationDialog = true },
         enabled = viewModel.accountType.value == "user"
     )
@@ -367,14 +372,16 @@ fun ActionBarLayout(
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         // Attend/Unattend Button
-        MyIconButton(
-            painter = painterResource(
-                id = if (attend) R.drawable.attend_checked else R.drawable.attend_uncheckedpng
-            ),
-            onClick = onAttendClick,
-            modifier = Modifier,
-            enabled = enabled
-        )
+        if (enabled)
+            MyIconButton(
+                painter = painterResource(
+                    id = if (attend) R.drawable.attend_checked else R.drawable.attend_uncheckedpng
+                ),
+                onClick = onAttendClick,
+                enabled = enabled,
+                modifier = Modifier
+
+            )
 
         // Attendees Count
         Text(
@@ -395,7 +402,7 @@ fun ActionBarLayout(
 }
 
 @Composable
-fun ConfirmationDialog(text:String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmationDialog(text: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         text = {
             Text(

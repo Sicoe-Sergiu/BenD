@@ -41,15 +41,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.bend.model.Artist
 import com.example.bend.ui.theme.PrimaryText
-import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T> ArtistsSelectSearchInputText(
+fun ArtistsSelectSearchInputText(
     modifier: Modifier = Modifier,
-    listOfItems: List<T>,
-    onArtistsChanged: (List<T>) -> Unit,
+    listOfItems: List<Artist>,
+    onArtistsChanged: (List<Artist>) -> Unit,
     enable: Boolean = true,
     readOnly: Boolean = true,
     placeholder: String = "Select Option",
@@ -57,10 +57,11 @@ fun <T> ArtistsSelectSearchInputText(
     closedIcon: ImageVector = Icons.Outlined.KeyboardArrowDown,
     parentTextFieldCornerRadius: Dp = 5.dp,
     colors: TextFieldColors = TextFieldDefaults.outlinedTextFieldColors(),
-    dropdownItem: @Composable (T) -> Unit,
-    isError: Boolean = false
+    dropdownItem: @Composable (Artist) -> Unit,
+    isError: Boolean = false,
+    selectedItems: List<Artist> = emptyList()
 ) {
-    var selectedOptions by rememberSaveable { mutableStateOf(emptyList<T>()) }
+    var selectedOptions by rememberSaveable { mutableStateOf(selectedItems) }
     var searchedOption by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var filteredItems by remember { mutableStateOf(listOfItems) }
@@ -92,7 +93,7 @@ fun <T> ArtistsSelectSearchInputText(
         OutlinedTextField(
             modifier = modifier,
             colors = colors,
-            value = selectedOptions.joinToString(", ") { it.toString() },
+            value = selectedOptions.joinToString(", ") { it.stageName },
             readOnly = readOnly,
             enabled = enable,
             onValueChange = {},

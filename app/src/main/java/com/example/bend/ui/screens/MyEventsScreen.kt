@@ -79,7 +79,7 @@ fun MyEventsList(
 ) {
     val isRefreshing by viewModel.isLoading.collectAsState()
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
-    var selectedTabIndex by remember { mutableStateOf(0) } // Start with the first tab by default
+    var selectedTabIndex by remember { mutableStateOf(0) }
     val today = LocalDate.now()
     val futureEvents = events.filter { event ->
         LocalDate.parse(event.endDate).isAfter(today)
@@ -97,8 +97,8 @@ fun MyEventsList(
             onTabSelected = { selectedTabIndex = it },
         )
         when (selectedTabIndex) {
-            0 -> eventsList(swipeRefreshState, futureEvents, viewModel, navController)
-            1 -> eventsList(swipeRefreshState, pastEvents, viewModel, navController)
+            0 -> eventsList(swipeRefreshState, futureEvents, viewModel, navController, 0)
+            1 -> eventsList(swipeRefreshState, pastEvents, viewModel, navController, 1)
         }
     }
 }
@@ -108,7 +108,8 @@ fun eventsList(
     swipeRefreshState: SwipeRefreshState,
     events: List<Event>,
     viewModel: MyEventsViewModel,
-    navController: NavController
+    navController: NavController,
+    selectedTab:Int
 ) {
     SwipeRefresh(
         state = swipeRefreshState,
@@ -130,7 +131,8 @@ fun eventsList(
                     event = event,
                     founder = founder.value,
                     viewModel = viewModel,
-                    navController = navController
+                    navController = navController,
+                    selectedTab = selectedTab
                 )
             }
         }

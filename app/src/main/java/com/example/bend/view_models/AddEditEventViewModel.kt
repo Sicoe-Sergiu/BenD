@@ -1,10 +1,12 @@
 package com.example.bend.view_models
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.bend.Constants
 import com.example.bend.events.CreateEventUIEvent
@@ -14,25 +16,27 @@ import com.example.bend.model.EventArtist
 import com.example.bend.register_login.CreateEventValidator
 import com.example.bend.ui_state.CreateEventUiState
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 
-class CreateEventViewModel : ViewModel() {
-    private val TAG = CreateEventViewModel::class.simpleName
+class AddEditEventViewModel : ViewModel() {
+    private val TAG = AddEditEventViewModel::class.simpleName
     var createEventUiState = mutableStateOf(CreateEventUiState())
 
     private val storage = FirebaseStorage.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
-    private val artistsCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("artist")
 
-    private val artistsLiveData: MutableLiveData<List<Artist>> = MutableLiveData()
-    val artistsStageNamesLiveData: LiveData<List<String>> = getArtistStageNames()
+    val artistsLiveData: MutableLiveData<List<Artist>> = MutableLiveData()
 
     private var posterUriValidationsPassed = mutableStateOf(false)
     private var entranceFeeValidationsPassed = mutableStateOf(false)
@@ -99,9 +103,9 @@ class CreateEventViewModel : ViewModel() {
                 printState()
             }
 
-            is CreateEventUIEvent.ArtistsUsernamesChanged -> {
+            is CreateEventUIEvent.ArtistsChanged -> {
                 createEventUiState.value =
-                    createEventUiState.value.copy(artistsStageNames = event.artistsUsernames)
+                    createEventUiState.value.copy(artists = event.artistsUsernames)
                 validateArtistsDataWithRules()
                 printState()
             }
@@ -110,14 +114,123 @@ class CreateEventViewModel : ViewModel() {
             is CreateEventUIEvent.CreateEventButtonClicked -> {
                 validateAll()
                 navController = event.navController
-                if (checkErrors()){
+                if (checkErrors()) {
                     createEvent(navController)
+                }
+            }
+
+            is CreateEventUIEvent.EditEventButtonClicked -> {
+                validateAll()
+                navController = event.navController
+                if (checkErrors()) {
+                    editEvent(navController)
                 }
             }
 
             else -> {}
         }
     }
+
+    private fun editEvent(navController: NavController) {
+        val currentUserUID = currentUser?.uid ?: ""
+        val editEventState = createEventUiState.value
+        val posterUUID = editEventState.uuid
+
+        val storageRef: StorageReference =
+            storage.reference.child("events_posters/$posterUUID")
+
+        if (createEventUiState.value.posterUri.toString().startsWith("http")) {
+            val updatedEvent = Event(
+                uuid = editEventState.uuid,
+                location = editEventState.location,
+                entranceFee = editEventState.entranceFee,
+                startDate = editEventState.startDate.toString(),
+                endDate = editEventState.endDate.toString(),
+                startTime = editEventState.startTime.toString(),
+                endTime = editEventState.endTime.toString(),
+                founderUUID = currentUserUID,
+                posterDownloadLink = editEventState.posterUri.toString(),
+                creationTimestamp = System.currentTimeMillis()
+            )
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    firestore.collection("event").document(updatedEvent.uuid)
+                        .set(updatedEvent, SetOptions.merge())
+                        .addOnSuccessListener {
+                            viewModelScope.launch(Dispatchers.IO){
+                                deleteEventArtistWithEventUUID(eventUUID = updatedEvent.uuid)
+                                for (artist in createEventUiState.value.artists){
+                                    firestore.collection("event_artist").add(EventArtist(artist.uuid, updatedEvent.uuid))
+                                }
+                                navController.navigate(Constants.NAVIGATION_MY_EVENTS)
+
+                            }
+                        }
+                    println("Document update successful!")
+                } catch (e: Exception) {
+                    println("Error updating document: $e")
+                }
+            }
+        } else {
+            createEventUiState.value.posterUri?.let { posterUri ->
+                storageRef.putFile(posterUri)
+                    .addOnSuccessListener {
+                        storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                            val updatedEvent = Event(
+                                uuid = editEventState.uuid,
+                                location = editEventState.location,
+                                entranceFee = editEventState.entranceFee,
+                                startDate = editEventState.startDate.toString(),
+                                endDate = editEventState.endDate.toString(),
+                                startTime = editEventState.startTime.toString(),
+                                endTime = editEventState.endTime.toString(),
+                                founderUUID = currentUserUID,
+                                posterDownloadLink = downloadUrl.toString(),
+                                creationTimestamp = System.currentTimeMillis()
+                            )
+                            viewModelScope.launch(Dispatchers.IO) {
+                                try {
+                                    firestore.collection("event").document(updatedEvent.uuid)
+                                        .set(updatedEvent, SetOptions.merge())
+                                        .addOnSuccessListener {
+                                            viewModelScope.launch(Dispatchers.IO){
+                                                deleteEventArtistWithEventUUID(eventUUID = updatedEvent.uuid)
+                                                for (artist in createEventUiState.value.artists){
+                                                    firestore.collection("event_artist").add(EventArtist(artist.uuid, updatedEvent.uuid))
+                                                }
+                                                navController.navigate(Constants.NAVIGATION_MY_EVENTS)
+                                            }
+                                        }
+                                    println("Document update successful!")
+                                } catch (e: Exception) {
+                                    println("Error updating document: $e")
+                                }
+                            }
+
+                        }
+                    }
+                    .addOnFailureListener { exception ->
+                        // TODO: Handle unsuccessful upload
+                        Log.e("EVENT", "Error uploading image: $exception")
+                    }
+            }
+        }
+
+
+    }
+    private suspend fun deleteEventArtistWithEventUUID(eventUUID: String) {
+
+        val querySnapshot = firestore.collection("event_artist")
+            .whereEqualTo("eventUUID", eventUUID)
+            .get()
+            .await()
+
+        for (document in querySnapshot.documents) {
+            firestore.collection("event_artist").document(document.id).delete().await()
+            println("Document with ID ${document.id} deleted successfully.")
+        }
+    }
+
 
     private fun checkErrors(): Boolean {
         return (
@@ -164,69 +277,46 @@ class CreateEventViewModel : ViewModel() {
     }
 
     private fun createEventInDatabase(eventUUID: UUID, posterDownloadLink: String) {
-        createEventUiState.value.run {
-            val event = Event(
-                uuid = eventUUID.toString(),
-                location = location,
-                entranceFee = entranceFee,
-                startDate = startDate.toString(),
-                endDate = endDate.toString(),
-                startTime = startTime.toString(),
-                endTime = endTime.toString(),
-                artistStageNames = artistsStageNames,
-                founderUUID = currentUser?.uid ?: "",
-                posterDownloadLink = posterDownloadLink,
-                creationTimestamp = System.currentTimeMillis()
-            )
+        val currentUserUID = currentUser?.uid ?: ""
+        val createEventState = createEventUiState.value
 
-            val db = FirebaseFirestore.getInstance()
-            db.collection("event")
-                .document(eventUUID.toString()).set(event)
-                .addOnSuccessListener {
-                    // TODO: Handle succes
-                    Log.d("EVENT", "Event added successfully")
+        val event = Event(
+            uuid = eventUUID.toString(),
+            location = createEventState.location,
+            entranceFee = createEventState.entranceFee,
+            startDate = createEventState.startDate.toString(),
+            endDate = createEventState.endDate.toString(),
+            startTime = createEventState.startTime.toString(),
+            endTime = createEventState.endTime.toString(),
+            founderUUID = currentUserUID,
+            posterDownloadLink = posterDownloadLink,
+            creationTimestamp = System.currentTimeMillis()
+        )
 
-                    val artistsList = mutableListOf<Artist>()
-                    artistsCollection
-                        .whereIn("stageName", artistsStageNames)
-                        .get()
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                for (document in task.result!!) {
-                                    val artist = document.toObject(Artist::class.java)
-                                    artistsList.add(artist)
-                                }
-                                for (artist in artistsList){
-                                    val eventArtist = EventArtist(artistUUID = artist.uuid, eventUUID = event.uuid)
-                                    db.collection("event_artist")
-                                        .document(UUID.randomUUID().toString())
-                                        .set(eventArtist)
-                                        .addOnCompleteListener { task ->
-                                            if (task.isSuccessful) {
-                                                Log.e("EVENT", "event_artist added ")
-                                                navController.navigate(Constants.NAVIGATION_PROFILE_PAGE)
-                                            }
-                                        }
-                                        .addOnFailureListener { e ->
-                                            // TODO: Handle unsuccessful upload
-                                            Log.e("EVENT", "Error adding event_artist: $e")
-                                        }
-                                }
+        val db = FirebaseFirestore.getInstance()
+        val eventDocRef = db.collection("event").document(eventUUID.toString())
 
-                                eventCreationInProgress.value = false
-                            }
-                        }.addOnFailureListener { e ->
-                            // TODO: Handle unsuccessful fetching artists
-                            Log.e("EVENT", "Error fetching artists: $e")
-                        }
+        db.runBatch { batch ->
+            batch.set(eventDocRef, event)
 
-                }
-                .addOnFailureListener { e ->
-                    // TODO: Handle unsuccessful upload
-                    Log.e("EVENT", "Error adding event: $e")
-                }
+            createEventState.artists.forEach { artist ->
+                val eventArtist = EventArtist(
+                    artistUUID = artist.uuid,
+                    eventUUID = eventUUID.toString()
+                )
+                val eventArtistDocRef = db.collection("event_artist").document()
+
+                batch.set(eventArtistDocRef, eventArtist)
+            }
+        }.addOnSuccessListener {
+            Log.d("EVENT", "Event and event artists added successfully")
+            navController.navigate(Constants.userProfileNavigation(currentUserUID))
+        }.addOnFailureListener { e ->
+            Log.e("EVENT", "Error adding event or event artists: $e")
+            // Handle failure
         }
     }
+
 
     private fun validateStartDateDataWithRules() {
         val result = createEventUiState.value.startDate?.let {
@@ -293,14 +383,14 @@ class CreateEventViewModel : ViewModel() {
     }
 
     private fun validateArtistsDataWithRules() {
-        val result = createEventUiState.value.artistsStageNames?.let {
+        val result = createEventUiState.value.artists?.let {
             CreateEventValidator.validateArtists(
                 artistsUsernames = it
             )
         }
         if (result != null) {
             createEventUiState.value = createEventUiState.value.copy(
-                artistsUsernamesError = result.status
+                artistsError = result.status
             )
         }
         if (result != null) {
@@ -390,6 +480,47 @@ class CreateEventViewModel : ViewModel() {
 
                 //TODO: Handle error
             }
+    }
+
+    suspend fun populateUiState(eventUUID: String?) {
+        val artistsList: MutableList<Artist> = mutableListOf()
+
+        try {
+            val event = firestore.collection("event").whereEqualTo("uuid", eventUUID).get().await()
+                .toObjects(Event::class.java).firstOrNull() ?: return
+
+            val eventArtists =
+                firestore.collection("event_artist").whereEqualTo("eventUUID", eventUUID).get()
+                    .await()
+                    .toObjects(EventArtist::class.java)
+
+            eventArtists.forEach { eventArtist ->
+                firestore.collection("artist").whereEqualTo("uuid", eventArtist.artistUUID).get()
+                    .await()
+                    .toObjects(Artist::class.java).firstOrNull()?.let { artist ->
+                        artistsList.add(artist)
+                    }
+            }
+
+            updateUiState(event, artistsList)
+            Log.d("BLABLA", "UI state populated successfully.")
+        } catch (e: Exception) {
+            Log.e("populateUiState", "Error populating UI state", e)
+        }
+    }
+
+    private fun updateUiState(event: Event, artists: List<Artist>) {
+        createEventUiState.value = createEventUiState.value.copy(
+            uuid = event.uuid,
+            location = event.location,
+            entranceFee = event.entranceFee,
+            startDate = LocalDate.parse(event.startDate),
+            endDate = LocalDate.parse(event.endDate),
+            startTime = LocalTime.parse(event.startTime),
+            endTime = LocalTime.parse(event.endTime),
+            artists = artists,
+            posterUri = Uri.parse(event.posterDownloadLink)
+        )
     }
 
 

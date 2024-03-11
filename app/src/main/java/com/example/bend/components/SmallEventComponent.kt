@@ -20,8 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Reviews
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bend.Constants
+import com.example.bend.Constants.addReviewNavigation
 import com.example.bend.Constants.editEventNavigation
 import com.example.bend.model.Event
 import com.example.bend.model.EventFounder
@@ -49,18 +52,26 @@ fun SmallEventComponent(
     viewModel: MyEventsViewModel,
     modifier: Modifier = Modifier,
     navController: NavController,
+    selectedTab:Int
 ) {
     var showConfirmationDialog by remember { mutableStateOf(false) }
+    var removeEventTrigger by remember { mutableStateOf(0) }
+
     if (showConfirmationDialog) {
         ConfirmationDialog(
             text = "Are you sure you want to delete this event from your list?",
 
             onConfirm = {
-                viewModel.removeEvent(event)
+                removeEventTrigger++
                 showConfirmationDialog = false
             },
             onDismiss = { showConfirmationDialog = false }
         )
+    }
+    LaunchedEffect(removeEventTrigger) {
+        if (removeEventTrigger > 0) {
+            viewModel.removeEvent(event)
+        }
     }
 
     Box(
@@ -97,13 +108,23 @@ fun SmallEventComponent(
                         },
                         buttonColor = LightPrimaryColor
                     )
-                    CustomIconButton(
-                        icon = Icons.Filled.Edit,
-                        contentDescription = "Edit",
-                        onClick = { navController.navigate(editEventNavigation(event.uuid)) },
-                        buttonColor = green
+                    if (selectedTab == 0){
+                        CustomIconButton(
+                            icon = Icons.Filled.Edit,
+                            contentDescription = "Edit",
+                            onClick = { navController.navigate(editEventNavigation(event.uuid)) },
+                            buttonColor = green
 
-                    )
+                        )
+                    }
+                    if (selectedTab == 1){
+                        CustomIconButton(
+                            icon = Icons.Filled.Reviews,
+                            contentDescription = "Review",
+                            onClick = { navController.navigate(addReviewNavigation(event.uuid)) },
+                            buttonColor = green
+                        )
+                    }
                     CustomIconButton(
                         icon = Icons.Filled.Delete,
                         contentDescription = "Remove",

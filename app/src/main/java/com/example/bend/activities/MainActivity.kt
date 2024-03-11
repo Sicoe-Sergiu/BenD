@@ -13,8 +13,8 @@ import com.example.bend.Constants
 import com.example.bend.register_login.ResetPasswordScreen
 import com.example.bend.register_login.SignInScreen
 import com.example.bend.register_login.SignUpScreen
-import com.example.bend.ui.screens.CreateEventScreen
-import com.example.bend.ui.screens.EditEventScreen
+import com.example.bend.ui.screens.AddReviewScreen
+import com.example.bend.ui.screens.AddEditEventScreen
 import com.example.bend.ui.screens.FeedScreen
 import com.example.bend.ui.screens.MyEventsScreen
 import com.example.bend.ui.screens.ProfileScreen
@@ -105,7 +105,24 @@ class MainActivity : ComponentActivity() {
                     val eventId =
                         backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
                     if (eventId != null) {
-                        EditEventScreen(
+                        AddEditEventScreen(
+                            eventUUID = eventId,
+                            navController = navController,
+                            editMode = true
+                        )
+                    }
+                }
+//                Add Review Page
+                composable(
+                    Constants.NAVIGATION_ADD_REVIEW_PAGE,
+                    arguments = listOf(navArgument(Constants.NAVIGATION_EVENT_UUID_ARGUMENT) {
+                        type = NavType.StringType
+                    })
+                ) { backStackEntry ->
+                    val eventId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    if (eventId != null) {
+                        AddReviewScreen(
                             eventUUID = eventId,
                             navController = navController
                         )
@@ -114,7 +131,7 @@ class MainActivity : ComponentActivity() {
 //                SearchScreen
                 composable(Constants.NAVIGATION_SEARCH_PAGE) { SearchScreen(navController = navController) }
 //                CreateEventScreen
-                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE) { CreateEventScreen(navController = navController) }
+                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE) { AddEditEventScreen(navController = navController) }
 //                MyEventsScreen
                 composable(Constants.NAVIGATION_MY_EVENTS) {
                     MyEventsScreen(

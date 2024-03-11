@@ -1,6 +1,7 @@
 package com.example.bend.register_login
 
 import android.net.Uri
+import com.example.bend.model.Artist
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -81,7 +82,8 @@ object CreateEventValidator {
         return ValidationResult(status = true)
     }
 
-    fun validateArtists(artistsUsernames: List<String>): ValidationResult {
+//    fun validateArtists(artistsUsernames: List<String>): ValidationResult {
+    fun validateArtists(artistsUsernames: List<Artist>): ValidationResult {
         return if (artistsUsernames.isNotEmpty()) {
             ValidationResult(status = true)
         } else {

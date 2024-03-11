@@ -1,19 +1,21 @@
 package com.example.bend.ui_state
 
 import android.net.Uri
+import com.example.bend.model.Artist
 import java.time.LocalDate
 import java.time.LocalTime
 
 data class CreateEventUiState(
 
     var posterUri: Uri? = null,
-    var entranceFee: Int = -1,
+    var entranceFee: Int = 0,
     var location: String = "",
     var startDate: LocalDate? = null,
     var endDate: LocalDate? = null,
     var startTime: LocalTime? = null,
     var endTime: LocalTime? = null,
-    var artistsStageNames : List<String> = emptyList(),
+    var artists : List<Artist> = emptyList(),
+    var uuid : String = "",
 
 //    errors\
     var posterError: Boolean = true,
@@ -23,5 +25,5 @@ data class CreateEventUiState(
     var endDateError: Boolean = true,
     var startTimeError: Boolean = true,
     var endTimeError: Boolean = true,
-    var artistsUsernamesError: Boolean = true,
+    var artistsError: Boolean = true,
 )

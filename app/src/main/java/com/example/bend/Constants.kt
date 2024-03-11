@@ -13,6 +13,7 @@ object Constants {
     const val NAVIGATION_PROFILE_PAGE = "profilePage/{userUUID}"
     const val NAVIGATION_SINGLE_EVENT_PAGE = "singleEventPage/{eventUUID}"
     const val NAVIGATION_EDIT_EVENT_PAGE = "editEventPage/{eventUUID}"
+    const val NAVIGATION_ADD_REVIEW_PAGE = "addReviewPage/{eventUUID}"
 
     const val NAVIGATION_USER_UUID_ARGUMENT = "userUUID"
     const val NAVIGATION_EVENT_UUID_ARGUMENT = "eventUUID"
@@ -21,5 +22,6 @@ object Constants {
     fun userProfileNavigation(userUUID : String) = "profilePage/$userUUID"
     fun singleEventNavigation(eventUUID : String) = "singleEventPage/$eventUUID"
     fun editEventNavigation(eventUUID : String) = "editEventPage/$eventUUID"
+    fun addReviewNavigation(eventUUID : String) = "addReviewPage/$eventUUID"
 
 }
