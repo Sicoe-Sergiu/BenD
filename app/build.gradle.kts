@@ -100,6 +100,7 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
 //refresh
     implementation("com.google.accompanist:accompanist-swiperefresh:0.27.0")
+    implementation ("com.github.krottv:compose-sliders:0.1.14")
 
 
 }

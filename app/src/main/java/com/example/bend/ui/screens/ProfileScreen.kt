@@ -4,6 +4,7 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +52,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.bend.Constants
-import com.example.bend.components.BottomNavigationBar
-import com.example.bend.components.BottomNavigationItem
 import com.example.bend.components.CustomTopBar
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.bend.R
+import com.example.bend.components.BottomNavigationBar2
 import com.example.bend.model.Event
 import com.example.bend.ui.theme.green
 import com.example.bend.view_models.ProfileViewModel
@@ -72,12 +73,15 @@ fun ProfileScreen(
     viewModel: ProfileViewModel,
     userUUID: String
 ) {
+    var selectedItemIndex by rememberSaveable { mutableStateOf(3) }
+
     Scaffold(
         topBar = { ProfileTopBar(navController, userUUID) },
         bottomBar = {
-            BottomNavigationBar(
+            BottomNavigationBar2(
                 navController = navController,
-                selectedItem = BottomNavigationItem.PROFILE
+                selectedItemIndex = selectedItemIndex,
+                onItemSelected = { selectedItemIndex = it}
             )
         },
     ) { innerPadding ->
@@ -453,9 +457,10 @@ fun FollowingButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .height(30.dp)
-            .width(110.dp),
+            .width(110.dp)
+        ,
         shape = RoundedCornerShape(50),
-        colors = ButtonDefaults.buttonColors(green),
+        colors = ButtonDefaults.buttonColors(containerColor = green),
         elevation = ButtonDefaults.buttonElevation(8.dp)
     ) {
         Text(
@@ -567,7 +572,13 @@ fun RoundImageNoBorder(
         modifier = modifier
             .aspectRatio(1f, matchHeightConstraintsFirst = true)
             .padding(3.dp)
-            .clip(CircleShape),
+            .clip(CircleShape)
+            .border(
+                width = 1.dp,
+                color = Color.DarkGray,
+                shape = CircleShape
+            )
+        ,
         contentScale = ContentScale.Crop
     )
 }

@@ -30,114 +30,96 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val navController = rememberNavController()
-            var startDestination = Constants.NAVIGATION_REGISTER_PAGE
             val firebaseAuth = FirebaseAuth.getInstance()
             val currentUser = firebaseAuth.currentUser
             val mainViewModel: HomeViewModel = viewModel()
             val profileViewModel: ProfileViewModel = viewModel()
 
-            if (currentUser != null) {
-                startDestination = Constants.NAVIGATION_HOME_PAGE
+            val startDestination = if (currentUser != null) {
+                Constants.NAVIGATION_HOME_PAGE
+            } else {
+                Constants.NAVIGATION_REGISTER_PAGE
             }
-
 
             NavHost(
                 navController = navController,
-                startDestination = Constants.NAVIGATION_HOME_PAGE
+                startDestination = startDestination
             ) {
-//                LoginScreen
-                composable(Constants.NAVIGATION_LOGIN_PAGE) { SignInScreen(navController = navController) }
-//                RegisterScreen
-                composable(Constants.NAVIGATION_REGISTER_PAGE) { SignUpScreen(navController = navController) }
-//                ForgotPasswordScreen
+                // Screen for signing in
+                composable(Constants.NAVIGATION_LOGIN_PAGE) {
+                    SignInScreen(navController = navController)
+                }
+                // Screen for signing up
+                composable(Constants.NAVIGATION_REGISTER_PAGE) {
+                    SignUpScreen(navController = navController)
+                }
+                // Screen for resetting password
                 composable(Constants.NAVIGATION_FORGOT_PASS_PAGE) {
-                    ResetPasswordScreen(
-                        navController = navController
-                    )
+                    ResetPasswordScreen(navController = navController)
                 }
-//                FeedScreen
+                // Home feed screen
                 composable(Constants.NAVIGATION_HOME_PAGE) {
-                    FeedScreen(
-                        navController = navController,
-                        homeViewModel = mainViewModel
-                    )
+                    FeedScreen(navController = navController, homeViewModel = mainViewModel)
                 }
-//                ProfileScreen
+                // Profile screen for a specific user
                 composable(
                     Constants.NAVIGATION_PROFILE_PAGE,
                     arguments = listOf(navArgument(Constants.NAVIGATION_USER_UUID_ARGUMENT) {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val userId =
-                        backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
-                    if (userId != null) {
-                        ProfileScreen(
-                            userUUID = userId, navController = navController,
-                            viewModel = profileViewModel
-                        )
+                    val userId = backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
+                    userId?.let { uid ->
+                        ProfileScreen(userUUID = uid, navController = navController, viewModel = profileViewModel)
                     }
                 }
-//                SingleEventScreen
+                // Screen for a single event
                 composable(
                     Constants.NAVIGATION_SINGLE_EVENT_PAGE,
                     arguments = listOf(navArgument(Constants.NAVIGATION_EVENT_UUID_ARGUMENT) {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val eventId =
-                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
-                    if (eventId != null) {
-                        SingleEventScreen(
-                            eventUUID = eventId,
-                            viewModel = mainViewModel,
-                            navController = navController
-                        )
+                    val eventId = backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    eventId?.let { eid ->
+                        SingleEventScreen(eventUUID = eid, viewModel = mainViewModel, navController = navController)
                     }
                 }
-//                editEventScreen
+                // Screen for editing an event
                 composable(
                     Constants.NAVIGATION_EDIT_EVENT_PAGE,
                     arguments = listOf(navArgument(Constants.NAVIGATION_EVENT_UUID_ARGUMENT) {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val eventId =
-                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
-                    if (eventId != null) {
-                        AddEditEventScreen(
-                            eventUUID = eventId,
-                            navController = navController,
-                            editMode = true
-                        )
+                    val eventId = backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    eventId?.let { eid ->
+                        AddEditEventScreen(eventUUID = eid, navController = navController, editMode = true)
                     }
                 }
-//                Add Review Page
+                // Screen for adding a review to an event
                 composable(
                     Constants.NAVIGATION_ADD_REVIEW_PAGE,
                     arguments = listOf(navArgument(Constants.NAVIGATION_EVENT_UUID_ARGUMENT) {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val eventId =
-                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
-                    if (eventId != null) {
-                        AddReviewScreen(
-                            eventUUID = eventId,
-                            navController = navController
-                        )
+                    val eventId = backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    eventId?.let { eid ->
+                        AddReviewScreen(eventUUID = eid, navController = navController)
                     }
                 }
-//                SearchScreen
-                composable(Constants.NAVIGATION_SEARCH_PAGE) { SearchScreen(navController = navController) }
-//                CreateEventScreen
-                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE) { AddEditEventScreen(navController = navController) }
-//                MyEventsScreen
+                // Screen for searching events
+                composable(Constants.NAVIGATION_SEARCH_PAGE) {
+                    SearchScreen(navController = navController)
+                }
+                // Screen for creating or editing an event
+                composable(Constants.NAVIGATION_CREATE_EVENT_PAGE) {
+                    AddEditEventScreen(navController = navController)
+                }
+                // Screen for displaying user's events
                 composable(Constants.NAVIGATION_MY_EVENTS) {
-                    MyEventsScreen(
-                        navController = navController
-
-                    )
+                    MyEventsScreen(navController = navController)
                 }
             }
         }

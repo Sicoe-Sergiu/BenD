@@ -9,11 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
-import com.example.bend.components.BottomNavigationBar
-import com.example.bend.components.BottomNavigationItem
+import com.example.bend.components.BottomNavigationBar2
 import com.example.bend.components.CustomTopBar
 import com.example.bend.components.EventComponent
 import com.example.bend.model.Event
@@ -27,6 +29,7 @@ fun FeedScreen(
     homeViewModel: HomeViewModel
 ) {
     val events = homeViewModel.events.observeAsState()
+    var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -36,10 +39,12 @@ fun FeedScreen(
                 })
         },
         bottomBar = {
-            BottomNavigationBar(
+            BottomNavigationBar2(
                 navController = navController,
-                selectedItem = BottomNavigationItem.FEED
+                selectedItemIndex = selectedItemIndex,
+                onItemSelected = { selectedItemIndex = it}
             )
+
         },
 
         ) { innerPadding ->

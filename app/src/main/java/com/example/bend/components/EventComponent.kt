@@ -57,7 +57,9 @@ import com.example.bend.ui.screens.RoundImageNoBorder
 import com.example.bend.view_models.HomeViewModel
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
 import com.example.bend.Constants
+import com.example.bend.ui.theme.green
 
 @Composable
 fun EventComponent(
@@ -90,8 +92,9 @@ fun EventComponent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(400.dp)
+                    .shadow(elevation = 9.dp, shape = RoundedCornerShape(10.dp), clip = true, ambientColor = Color.Black)
                     .clip(shape = RoundedCornerShape(10.dp))
-                    .border(width = 1.dp, Color.Black, shape = RoundedCornerShape(10.dp))
+                    .border(width = 1.dp, green, shape = RoundedCornerShape(10.dp))
             )
             ExpandIcon(expanded) { expanded = !expanded }
             if (expanded) {
@@ -125,10 +128,10 @@ fun EventHeader(
 }
 
 @Composable
-fun FounderProfile(founder: EventFounder?, navController: NavController) {
+fun FounderProfile(founder: EventFounder?, navController: NavController, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .clip(shape = RoundedCornerShape(30.dp))
             .clickable {
                 navController.navigate(
@@ -367,7 +370,9 @@ fun ActionBarLayout(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, Color.Black, shape = RoundedCornerShape(16.dp))
+            .shadow(elevation = 5.dp, shape = RoundedCornerShape(10.dp), clip = true, ambientColor = Color.Black)
+
+            .border(1.dp, green, shape = RoundedCornerShape(16.dp))
             .background(color = Color.White, shape = RoundedCornerShape(16.dp)),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {

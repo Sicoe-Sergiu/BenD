@@ -7,22 +7,30 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.example.bend.components.BottomNavigationBar
-import com.example.bend.components.BottomNavigationItem
+import com.example.bend.components.BottomNavigationBar2
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen (
     navController: NavController,
 ){
+    var selectedItemIndex by rememberSaveable { mutableStateOf(1) }
+
 
     Scaffold(
         topBar = {},
         bottomBar = {
-            BottomNavigationBar(navController = navController, selectedItem = BottomNavigationItem.SEARCH)
+            BottomNavigationBar2(
+                navController = navController,
+                selectedItemIndex = selectedItemIndex,
+                onItemSelected = { selectedItemIndex = it}
+            )
         },
 
         ) {

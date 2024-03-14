@@ -48,8 +48,6 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.bend.components.AddPosterButton
 import com.example.bend.components.ArtistComponent
-import com.example.bend.components.BottomNavigationBar
-import com.example.bend.components.BottomNavigationItem
 import com.example.bend.components.CustomTopBar
 import com.example.bend.components.DatePicker
 import com.example.bend.components.MyButtonComponent
@@ -119,23 +117,23 @@ fun AddEditEventScreen(
         Scaffold(
             topBar = {
                 CustomTopBar(
-                    text = "BenD",
-                    icons = listOf {
-                    })
+                    {
+                        BackButton {
+                            navController.popBackStack()
+                        }
+                    },
+                    text = "Create Event",
+                    icons = listOf()
+                )
             },
             bottomBar = {
-                BottomNavigationBar(
-                    navController = navController,
-                    selectedItem = BottomNavigationItem.FEED,
-
-                    )
             },
 
             ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(vertical = 55.dp),
+                    .padding(it),
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
