@@ -214,8 +214,9 @@ class RegisterViewModel : ViewModel() {
                                 lastName = registration_ui_state.last_name,
                                 phone = registration_ui_state.phone,
                                 email = registration_ui_state.email,
-                                rating = 0.0,
-                                profilePhotoURL = ""
+                                profilePhotoURL = "",
+                                rating = 0f,
+                                ratingsNumber = 0
                             )
 
                             db.collection("event_founder")
@@ -235,8 +236,9 @@ class RegisterViewModel : ViewModel() {
                                 firstName = registration_ui_state.first_name,
                                 lastName = registration_ui_state.last_name,
                                 stageName = registration_ui_state.stage_name,
-                                profilePhotoURL = ""
-
+                                profilePhotoURL = "",
+                                rating = 0f,
+                                ratingsNumber = 0
                             )
                             db.collection("artist")
                                 .document(uid)

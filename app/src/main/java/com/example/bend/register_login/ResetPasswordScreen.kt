@@ -13,20 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.bend.Constants
 import com.example.bend.components.BoldTextComponent
-import com.example.bend.components.ClickableLoginRegisterText
 import com.example.bend.components.MyButtonComponent
 import com.example.bend.components.MyTextFieldComponent
 import com.example.bend.components.NormalTextComponent
 import com.example.bend.events.ForgotPassUIEvent
-import com.example.bend.events.LoginUIEvent
-import com.example.bend.ui.theme.green
 import com.example.bend.view_models.ForgotPasswordViewModel
 
 @Composable
@@ -65,7 +59,7 @@ fun ResetPasswordScreen(
                     onButtonClicked = {
                         reset_password_view_model.onEvent(ForgotPassUIEvent.ResetButtonClicked(navController))
                     },
-                    is_enabled = reset_password_view_model.email_validation_passed.value
+                    isEnabled = reset_password_view_model.email_validation_passed.value
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 

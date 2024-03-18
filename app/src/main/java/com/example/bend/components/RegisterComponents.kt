@@ -47,7 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.example.bend.ui.theme.Primary
 import com.example.bend.ui.theme.PrimaryText
 import com.example.bend.ui.theme.Secondary
-import com.example.bend.ui.theme.green
 
 
 @Composable
@@ -146,14 +145,15 @@ fun MyTextFieldComponent(
     labelValue:String,
     initialValue: String = "",
     onTextSelected: (String) -> Unit,
-    errorStatus:Boolean = false
+    errorStatus:Boolean = false,
+    modifier: Modifier = Modifier
 ){
     val textValue = remember {
         mutableStateOf(initialValue)
     }
 
     OutlinedTextField(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         label = {Text(text = labelValue)},
         colors = TextFieldDefaults.outlinedTextFieldColors(
             focusedBorderColor = PrimaryText,
@@ -244,16 +244,17 @@ fun MyDropDownMenuComponent(
 fun MyButtonComponent(
     value:String,
     onButtonClicked : () -> Unit,
-    is_enabled:Boolean = false
-    ){
+    modifier: Modifier = Modifier,
+    isEnabled:Boolean = false
+){
     Button(
         onClick = { onButtonClicked.invoke() },
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(48.dp),
         contentPadding = PaddingValues(),
         colors = ButtonDefaults.buttonColors(Color.Transparent),
-        enabled = is_enabled
+        enabled = isEnabled
 
     ) {
         Box(

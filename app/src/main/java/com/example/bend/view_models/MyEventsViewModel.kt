@@ -159,26 +159,28 @@ class MyEventsViewModel : ViewModel() {
         }
     }
 
-    suspend fun getEventFounderByUuid(uuid: String): EventFounder? {
-        try {
-            val documents = eventFounderCollection
-                .whereEqualTo("uuid", uuid)
-                .get()
-                .await()
+    companion object {
+        suspend fun getEventFounderByUuid(uuid: String): EventFounder? {
+            try {
+                val documents = FirebaseFirestore.getInstance().collection("event_founder")
+                    .whereEqualTo("uuid", uuid)
+                    .get()
+                    .await()
 
-            if (documents.isEmpty) {
-                println("No matching documents found")
-                return null
-            }
+                if (documents.isEmpty) {
+                    println("No matching documents found")
+                    return null
+                }
 
-            val document = documents.documents.firstOrNull()
-            document?.let {
-                return document.toObject(EventFounder::class.java)
+                val document = documents.documents.firstOrNull()
+                document?.let {
+                    return document.toObject(EventFounder::class.java)
+                }
+            } catch (e: Exception) {
+                println("Error getting documents: $e")
             }
-        } catch (e: Exception) {
-            println("Error getting documents: $e")
+            return null
         }
-        return null
     }
 
     suspend fun removeEvent(event: Event) {

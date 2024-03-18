@@ -18,7 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ContentAlpha
+import androidx.compose.material.Divider
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
@@ -34,15 +36,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.bend.components.ArtistComponent
 import com.example.bend.components.CustomSlider
 import com.example.bend.components.CustomTopBar
 import com.example.bend.components.FounderProfile
+import com.example.bend.components.MyButtonComponent
+import com.example.bend.components.MyTextFieldComponent
+import com.example.bend.components.WriteReviewComponent
+import com.example.bend.events.AddReviewUIEvent
+import com.example.bend.events.RegistrationUIEvent
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventFounder
@@ -51,7 +60,7 @@ import com.example.bend.view_models.AddReviewViewModel
 
 @Composable
 fun AddReviewScreen(
-    viewModel: AddReviewViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    viewModel: AddReviewViewModel = viewModel(),
     navController: NavController,
     eventUUID: String
 ) {
@@ -116,50 +125,94 @@ fun ReviewContent(
             .padding(10.dp)
             .clip(shape = RoundedCornerShape(20.dp))
             .background(Color.White)
-            .verticalScroll(rememberScrollState())
-        ,
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        FounderProfile(founder = founder, navController = navController, modifier = Modifier.padding(10.dp))
+        FounderProfile(
+            founder = founder,
+            navController = navController,
+            modifier = Modifier.padding(10.dp)
+        )
         AsyncImage(
             model = event?.posterDownloadLink,
             contentDescription = "poster image",
             modifier = Modifier
                 .size(200.dp)
-                .shadow(elevation = 9.dp, shape = RoundedCornerShape(12.dp), clip = true, ambientColor = Color.Black)
+                .shadow(
+                    elevation = 9.dp,
+                    shape = RoundedCornerShape(12.dp),
+                    clip = true,
+                    ambientColor = Color.Black
+                )
                 .clip(shape = RoundedCornerShape(10.dp))
-                .border(width = 1.dp, green, shape = RoundedCornerShape(12.dp))
-
-            ,
+                .border(width = 1.dp, green, shape = RoundedCornerShape(12.dp)),
             contentScale = ContentScale.FillBounds
         )
         Spacer(modifier = Modifier.height(10.dp))
-        CustomSliderWithLabels()
-        if (artists != null) {
-            for (artist in artists){
-                ArtistComponent(artist = artist, modifier = Modifier.width(150.dp), navController = navController)
-                CustomSliderWithLabels()
-            }
+        Divider(modifier = Modifier.width(80.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(text = "Please rate the Event:", fontSize = 20.sp)
+        CustomSliderWithLabels(viewModel = viewModel, sliderNo = 0)
+        WriteReviewComponent(
+            labelValue = "Write a review for ${founder?.username} ...",
+            onTextSelected = { viewModel.onEvent(AddReviewUIEvent.ReviewsChanged(it, 0)) },
+            errorStatus = true,
+
+            )
+        Divider(modifier = Modifier.width(80.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(text = "Please rate the Artists:", fontSize = 20.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        artists?.forEachIndexed { index, artist ->
+            ArtistComponent(
+                artist = artist,
+                modifier = Modifier.width(150.dp),
+                navController = navController
+            )
+            CustomSliderWithLabels(viewModel = viewModel, sliderNo = index + 1)
+            WriteReviewComponent(
+                labelValue = "Write a review for ${artist.stageName} ...",
+                onTextSelected = { viewModel.onEvent(AddReviewUIEvent.ReviewsChanged(it, index + 1)) },
+                errorStatus = true,
+                )
         }
+        MyButtonComponent(
+            value = "Add Review",
+            onButtonClicked = { viewModel.onEvent(AddReviewUIEvent.AddReviewButtonClicked(navController)) },
+            modifier = Modifier.padding(15.dp),
+            isEnabled = true
+        )
     }
 }
+
 @Composable
-fun CustomSliderWithLabels() {
+fun CustomSliderWithLabels(viewModel: AddReviewViewModel, sliderNo: Int) {
     val sliderRange = 0f..5f
 
 
     Column(
         modifier = Modifier
             .padding(16.dp)
-            .shadow(elevation = 9.dp, shape = RoundedCornerShape(12.dp), clip = true, ambientColor = Color.Black)
+            .shadow(
+                elevation = 9.dp,
+                shape = RoundedCornerShape(12.dp),
+                clip = true,
+                ambientColor = Color.Black
+            )
             .background(color = Color.LightGray, shape = RoundedCornerShape(12.dp))
     ) {
         CustomSlider(
             range = sliderRange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
+            onValueChange = {
+                viewModel.onEvent(AddReviewUIEvent.SlidersChanged(it, sliderNo))
+            }
+
         )
         SliderLabels(
             range = sliderRange,

@@ -310,7 +310,7 @@ fun AddEditEventScreen(
                                     addEditEventViewModel.onEvent(CreateEventUIEvent.CreateEventButtonClicked(navController))
                                 }
                             },
-                            is_enabled = true
+                            isEnabled = true
                         )
                         Spacer(modifier = Modifier.height(30.dp))
                     }

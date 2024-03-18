@@ -1,14 +1,26 @@
 package com.example.bend.view_models
 
 import android.util.Log
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavController
+import com.example.bend.Constants
+import com.example.bend.components.ArtistComponent
+import com.example.bend.components.WriteReviewComponent
+import com.example.bend.events.AddReviewUIEvent
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
 import com.example.bend.model.EventFounder
+import com.example.bend.model.Review
+import com.example.bend.ui.screens.CustomSliderWithLabels
+import com.example.bend.ui_state.ReviewUiState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,12 +31,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import java.util.UUID
 
 class AddReviewViewModel : ViewModel() {
     private val TAG = "ADD REVIEW SCREEN"
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
+    var reviewUiState = mutableStateOf(ReviewUiState())
+
 
     private val eventsCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event")
@@ -41,13 +55,121 @@ class AddReviewViewModel : ViewModel() {
 
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
+    lateinit var navController: NavController
 
     var event: LiveData<Event> = MutableLiveData()
     var founder: LiveData<EventFounder> = MutableLiveData()
     var artists: LiveData<List<Artist>> = MutableLiveData(emptyList())
 
-    fun loadData( eventUUID: String){
-        viewModelScope.launch (Dispatchers.IO){
+    fun onEvent(review: AddReviewUIEvent) {
+
+        when (review) {
+            is AddReviewUIEvent.SlidersChanged -> {
+
+                val updatedRates = reviewUiState.value.rates.toMutableList()
+                updatedRates[review.sliderNo] = review.sliderValue
+                reviewUiState.value = reviewUiState.value.copy(rates = updatedRates)
+                printState()
+
+            }
+
+            is AddReviewUIEvent.ReviewsChanged -> {
+                val updatedReview = reviewUiState.value.reviews.toMutableList()
+                updatedReview[review.reviewNo] = review.reviewText
+                reviewUiState.value = reviewUiState.value.copy(reviews = updatedReview)
+                printState()
+            }
+
+            is AddReviewUIEvent.AddReviewButtonClicked -> {
+                navController = review.navController
+                addReview(navController)
+            }
+        }
+    }
+
+    private fun updateFounderRating(){
+
+        FirebaseFirestore.getInstance().runTransaction { transaction ->
+            val founderDocRef = eventFounderCollection.document(founder.value!!.uuid)
+            val snapshot = transaction.get(founderDocRef)
+
+            val currentRating = snapshot.getDouble("rating") ?: 0.0
+            val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
+
+            val newRatingSum = currentRating + (reviewUiState.value.rates.getOrNull(0) ?: 0.0f).toDouble()
+            val newRatingsNumber = currentRatingNumber + 1
+
+            transaction.update(founderDocRef, "rating", newRatingSum)
+            transaction.update(founderDocRef, "ratingsNumber", newRatingsNumber)
+        }
+            .addOnSuccessListener {
+                // TODO:Handle success
+            }
+            .addOnFailureListener { e ->
+                // TODO:Handle failure
+            }
+    }
+    private fun updateArtistRating(artist: Artist, ratingNo: Int){
+
+        FirebaseFirestore.getInstance().runTransaction { transaction ->
+            val artistDocRef = artistsCollection.document(artist.uuid)
+            val snapshot = transaction.get(artistDocRef)
+
+            val currentRating = snapshot.getDouble("rating") ?: 0.0
+            val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
+
+            val newRatingSum = currentRating + (reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f).toDouble()
+            val newRatingsNumber = currentRatingNumber + 1
+
+            transaction.update(artistDocRef, "rating", newRatingSum)
+            transaction.update(artistDocRef, "ratingsNumber", newRatingsNumber)
+        }
+            .addOnSuccessListener {
+                // TODO:Handle success
+            }
+            .addOnFailureListener { e ->
+                // TODO:Handle failure
+            }
+    }
+
+    private fun addReview(userUUID: String, reviewNo: Int){
+        val review = Review(
+            uuid = UUID.randomUUID().toString(),
+            writerUUID = currentUser!!.uid,
+            userUUID = userUUID,
+            reviewText = reviewUiState.value.reviews[reviewNo],
+            System.currentTimeMillis()
+        )
+        FirebaseFirestore.getInstance().collection("review").add(review)
+            .addOnSuccessListener {
+//                TODO: handle success
+            }
+            .addOnFailureListener {
+//                TODO: handle failure
+            }
+    }
+
+    private fun addReview(navController: NavController) {
+        updateFounderRating()
+        if (reviewUiState.value.reviews[0] != ""){
+            addReview(founder.value!!.uuid, 0)
+        }
+        artists.value?.forEachIndexed { index, artist ->
+            updateArtistRating(artist, index + 1)
+            if (reviewUiState.value.reviews[index + 1] != ""){
+                addReview(artist.uuid, index + 1)
+            }
+        }
+        navController.navigate(Constants.NAVIGATION_MY_EVENTS)
+    }
+
+    private fun printState() {
+        Log.d(TAG, "Inside_printState")
+        Log.d(TAG, reviewUiState.toString())
+    }
+
+    fun loadData(eventUUID: String) {
+        viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
 
             val fetchEventDeferred = async { fetchEventByUUID(eventUUID) }
@@ -79,6 +201,7 @@ class AddReviewViewModel : ViewModel() {
             Log.e("fetchAndPostEventByUUID", "Error fetching event by UUID: $eventUUID", e)
         }
     }
+
     private suspend fun fetchFounderByUUID(founderUUID: String) {
         try {
             val task = eventFounderCollection.whereEqualTo("uuid", founderUUID).get().await()
@@ -91,7 +214,11 @@ class AddReviewViewModel : ViewModel() {
                 Log.e("fetchAndPostEventFounderByUUID", "No Founder found with UUID: $founderUUID")
             }
         } catch (e: Exception) {
-            Log.e("fetchAndPostEventFounderByUUID", "Error fetching Founder by UUID: $founderUUID", e)
+            Log.e(
+                "fetchAndPostEventFounderByUUID",
+                "Error fetching Founder by UUID: $founderUUID",
+                e
+            )
         }
     }
 

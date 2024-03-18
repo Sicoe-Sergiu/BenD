@@ -125,7 +125,7 @@ fun eventsList(
                 val founder = remember { mutableStateOf<EventFounder?>(null) }
 
                 LaunchedEffect(key1 = event.founderUUID) {
-                    founder.value = viewModel.getEventFounderByUuid(event.founderUUID)
+                    founder.value = MyEventsViewModel.getEventFounderByUuid(event.founderUUID)
                 }
 
                 SmallEventComponent(

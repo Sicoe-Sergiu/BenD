@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -107,7 +106,7 @@ fun SignUpScreen(
                     onButtonClicked = {
                         registerViewModel.onEvent(RegistrationUIEvent.RegisterButtonClicked(navController))
                     },
-                    is_enabled = registerViewModel.first_name_validations_passed.value &&
+                    isEnabled = registerViewModel.first_name_validations_passed.value &&
                             registerViewModel.last_name_validations_passed.value &&
                             registerViewModel.username_validations_passed.value &&
                             registerViewModel.email_validations_passed.value &&

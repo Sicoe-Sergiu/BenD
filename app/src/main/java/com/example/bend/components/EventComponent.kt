@@ -111,6 +111,7 @@ fun EventHeader(
     founder: EventFounder?,
     navController: NavController,
     modifier: Modifier = Modifier
+
 ) {
     Row(
         modifier = modifier
@@ -217,10 +218,10 @@ fun EventDetails(event: Event, artists: List<Artist>, navController: NavControll
 }
 
 @Composable
-fun DetailItem(@DrawableRes icon: Int, text: String) {
+fun DetailItem(@DrawableRes icon: Int, text: String, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 1.dp)
+        modifier = modifier.padding(vertical = 1.dp)
     ) {
         Icon(
             painter = painterResource(id = icon),

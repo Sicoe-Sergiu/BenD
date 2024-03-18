@@ -12,7 +12,9 @@ data class Artist(
     val firstName: String,
     val lastName: String,
     val stageName: String,
-    val profilePhotoURL:String
+    val profilePhotoURL:String,
+    val rating:Float,
+    val ratingsNumber:Int
 ) {
-    constructor() : this("", "", "", "", "", "","")
+    constructor() : this("", "", "", "", "", "","", -1f, -1)
 }

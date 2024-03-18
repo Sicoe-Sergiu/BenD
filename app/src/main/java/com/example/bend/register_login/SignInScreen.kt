@@ -29,7 +29,6 @@ import com.example.bend.events.LoginUIEvent
 import com.example.bend.ui.theme.PrimaryText
 import com.example.bend.ui.theme.green
 import com.example.bend.view_models.LoginViewModel
-import com.example.bend.view_models.RegisterViewModel
 
 @Composable
 fun SignInScreen(
@@ -82,7 +81,7 @@ fun SignInScreen(
                     onButtonClicked = {
                                       loginViewModel.onEvent(LoginUIEvent.LoginButtonClicked(navController))
                     },
-                    is_enabled = loginViewModel.password_validations_passed.value && loginViewModel.email_validation_passed.value
+                    isEnabled = loginViewModel.password_validations_passed.value && loginViewModel.email_validation_passed.value
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ClickableLoginRegisterText(

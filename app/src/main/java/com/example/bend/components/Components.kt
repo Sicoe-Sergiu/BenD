@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -266,4 +267,39 @@ fun TimePicker(
 }
 
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WriteReviewComponent(
+    labelValue:String,
+    initialValue: String = "",
+    onTextSelected: (String) -> Unit,
+    errorStatus:Boolean = false
+){
+    val textValue = remember {
+        mutableStateOf(initialValue)
+    }
+
+    OutlinedTextField(
+        modifier = Modifier.fillMaxWidth(). padding(16.dp),
+        label = {Text(text = labelValue)},
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            focusedBorderColor = PrimaryText,
+            focusedLabelColor = PrimaryText,
+            cursorColor = PrimaryText,
+        ),
+        keyboardOptions = KeyboardOptions.Default,
+        value = textValue.value,
+        onValueChange = {
+            textValue.value = it
+            onTextSelected(it)
+        },
+        singleLine = false,
+        maxLines = 10,
+        isError = !errorStatus
+//        TODO: leading icon
+
+//        leadingIcon = { Icon(painter = , contentDescription = )}
+    )
+}
 

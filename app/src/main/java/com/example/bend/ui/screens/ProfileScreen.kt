@@ -4,7 +4,6 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,8 +59,6 @@ import com.example.bend.components.BottomNavigationBar2
 import com.example.bend.model.Event
 import com.example.bend.ui.theme.green
 import com.example.bend.view_models.ProfileViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 
@@ -502,6 +499,41 @@ fun PostTabView(
                     modifier = Modifier
                         .padding(10.dp)
                         .size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TabViewWithText(
+    modifier: Modifier = Modifier,
+    texts: List<String>,
+    onTabSelected: (selectedIndex: Int) -> Unit
+) {
+    var selectedTabIndex by remember {
+        mutableStateOf(0)
+    }
+    val inactiveColor = Color(0xFF777777)
+    TabRow(
+        selectedTabIndex = selectedTabIndex,
+        backgroundColor = Color.Transparent,
+        contentColor = Color.Black,
+        modifier = modifier
+    ) {
+        texts.forEachIndexed { index, item ->
+            Tab(
+                selected = selectedTabIndex == index,
+                selectedContentColor = Color.Black,
+                unselectedContentColor = inactiveColor,
+                onClick = {
+                    selectedTabIndex = index
+                    onTabSelected(index)
+                }
+            ) {
+                Text(text = item, modifier = Modifier
+                    .padding(10.dp)
+                , fontSize = 15.sp
                 )
             }
         }

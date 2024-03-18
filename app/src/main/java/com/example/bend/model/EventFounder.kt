@@ -14,14 +14,10 @@ data class EventFounder(
     val lastName: String,
     val phone: String,
     val email: String,
-    val rating: Double,
-    val profilePhotoURL:String
+    val profilePhotoURL:String,
 
-//    val past_events: List<Event>,
-//    val future_events: List<Event>,
-
-//    val followers: List<User>,
-//    val following: List<User>
+    val rating:Float,
+    val ratingsNumber:Int
 ){
-    constructor() : this("", "", "", "", "", "", 0.0,"")
+    constructor() : this("", "", "", "", "", "","", -1f, -1)
 }

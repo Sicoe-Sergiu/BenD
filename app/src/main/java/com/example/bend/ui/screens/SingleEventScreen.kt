@@ -1,5 +1,6 @@
 package com.example.bend.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -63,7 +64,7 @@ fun SingleEventScreen(
 
         ) { innerPadding ->
         Box (
-            modifier = Modifier.fillMaxSize().padding(innerPadding)
+            modifier = Modifier.fillMaxSize().padding(innerPadding).background(Color.LightGray)
         ){
             EventComponent(
                 event = event,
