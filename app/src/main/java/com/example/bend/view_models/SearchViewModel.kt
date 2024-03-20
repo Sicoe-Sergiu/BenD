@@ -3,6 +3,7 @@ package com.example.bend.view_models
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bend.model.Artist
@@ -11,6 +12,7 @@ import com.example.bend.model.EventFounder
 import com.example.bend.model.User
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -40,68 +42,128 @@ class SearchViewModel : ViewModel(){
     var artists: LiveData<List<Artist>> = MutableLiveData(emptyList())
     var users: LiveData<List<User>> = MutableLiveData(emptyList())
 
+    private lateinit var fetchArtistsDeferred: Deferred<List<Artist>>
+    private lateinit var fetchEventsDeferred: Deferred<List<Event>>
+    private lateinit var fetchEventFoundersDeferred: Deferred<List<EventFounder>>
+    private lateinit var fetchUsersDeferred: Deferred<List<User>>
+
     var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
-
     init {
-        viewModelScope.launch (Dispatchers.IO){
-            val fetchArtistsDeferred = async { fetchArtists() }
-            val fetchEventsDeferred = async { searchEvents() }
-            val fetchEventFoundersDeferred = async { fetchEventFounders() }
-            val fetchUsersDeferred = async { fetchUsers() }
-
-            awaitAll(
-                fetchArtistsDeferred,
-                fetchEventsDeferred,
-                fetchEventFoundersDeferred,
-                fetchUsersDeferred
-            )
-        }
+        fetchData()
     }
     fun search(queryString: String) {
         viewModelScope.launch {
             _isLoading.value = true
 
+            if (this@SearchViewModel::fetchArtistsDeferred.isInitialized) awaitAll(
+                fetchArtistsDeferred,
+                fetchEventsDeferred,
+                fetchEventFoundersDeferred,
+                fetchUsersDeferred
+            )
 
+            updateLiveData()
 
+            filterResults(queryString)
 
             _isLoading.value = false
         }
     }
-    private suspend fun searchEvents() {
-        try {
-            val eventsList = eventsCollection.get().await().toObjects(Event::class.java)
-            (events as MutableLiveData).postValue(eventsList)
-        } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching events: $exception")
+    private fun filterResults(queryString: String) {
+        _isLoading.value = true
+        val currentArtists = artists.value ?: emptyList()
+        val currentEvents = events.value ?: emptyList()
+        val currentFounders = founders.value ?: emptyList()
+        val currentUsers = users.value ?: emptyList()
+
+        val matchedArtists = currentArtists.filter {
+            it.username.contains(queryString, ignoreCase = true) ||
+                    it.stageName.contains(queryString, ignoreCase = true) ||
+                    it.firstName.contains(queryString, ignoreCase = true) ||
+                    it.lastName.contains(queryString, ignoreCase = true)
+        }
+
+        val matchedFounders = currentFounders.filter {
+            it.username.contains(queryString, ignoreCase = true) ||
+                    it.firstName.contains(queryString, ignoreCase = true) ||
+                    it.lastName.contains(queryString, ignoreCase = true) ||
+                    it.username.contains(queryString, ignoreCase = true)
+
+        }
+
+        val matchedFounderUUIDs = matchedFounders.map { it.uuid }
+
+        val matchedEvents = currentEvents.filter {
+            it.location.contains(queryString, ignoreCase = true) ||
+                    matchedFounderUUIDs.contains(it.founderUUID)
+        }
+
+        val matchedUsers = currentUsers.filter {
+            it.username.contains(queryString, ignoreCase = true) ||
+                    it.firstName.contains(queryString, ignoreCase = true) ||
+                    it.lastName.contains(queryString, ignoreCase = true)
+        }
+
+        Log.d("SearchResults", "Artists found: ${matchedArtists.size}, Events found: ${matchedEvents.size}, Founders found: ${matchedFounders.size}, Users found: ${matchedUsers.size}")
+        (founders as MutableLiveData).postValue(matchedFounders)
+        (events as MutableLiveData).postValue(matchedEvents)
+        (artists as MutableLiveData).postValue(matchedArtists)
+        (users as MutableLiveData).postValue(matchedUsers)
+
+        _isLoading.value = false
+    }
+    private fun fetchData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            fetchArtistsDeferred = async { fetchArtists() }
+            fetchEventsDeferred = async { searchEvents() }
+            fetchEventFoundersDeferred = async { fetchEventFounders() }
+            fetchUsersDeferred = async { fetchUsers() }
         }
     }
-    private suspend fun fetchArtists() {
-        try {
-            val artistsList = artistsCollection.get().await().toObjects(Artist::class.java)
-            (artists as MutableLiveData).postValue(artistsList)
-        } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching artists: $exception")
+    private fun updateLiveData() {
+        if ((artists.value.isNullOrEmpty())) {
+            (artists as MutableLiveData).value = fetchArtistsDeferred.getCompleted()
+            (events as MutableLiveData).value = fetchEventsDeferred.getCompleted()
+            (founders as MutableLiveData).value = fetchEventFoundersDeferred.getCompleted()
+            (users as MutableLiveData).value = fetchUsersDeferred.getCompleted()
         }
     }
 
-    private suspend fun fetchEventFounders() {
+    private suspend fun searchEvents(): List<Event> {
         try {
-            val eventFoundersList =
-                eventFounderCollection.get().await().toObjects(EventFounder::class.java)
-            (founders as MutableLiveData).postValue(eventFoundersList)
+            return eventsCollection.get().await().toObjects(Event::class.java)
+        } catch (exception: Exception) {
+            Log.e(TAG, "Error fetching events: $exception")
+        }
+        return emptyList()
+    }
+    private suspend fun fetchArtists(): List<Artist> {
+        try {
+            return artistsCollection.get().await().toObjects(Artist::class.java)
+        } catch (exception: Exception) {
+            Log.e(TAG, "Error fetching artists: $exception")
+        }
+        return emptyList()
+    }
+
+    private suspend fun fetchEventFounders(): List<EventFounder> {
+        try {
+            return eventFounderCollection.get().await().toObjects(EventFounder::class.java)
         } catch (exception: Exception) {
             Log.e(TAG, "Error fetching founders: $exception")
         }
+        return emptyList()
+
     }
-    private suspend fun fetchUsers() {
+    private suspend fun fetchUsers(): List<User> {
         try {
-            val usersList =
-                userCollection.get().await().toObjects(User::class.java)
-            (users as MutableLiveData).postValue(usersList)
+            return userCollection.get().await().toObjects(User::class.java)
         } catch (exception: Exception) {
             Log.e(TAG, "Error fetching users: $exception")
         }
+        return emptyList()
+
     }
 }
