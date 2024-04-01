@@ -6,6 +6,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 object RegisterLoginValidator {
+    fun validatePhoto(uri: Uri): ValidationResult {
+        return ValidationResult(status = true)
+    }
     fun validateFirstName(first_name:String):ValidationResult{
         return ValidationResult(
             (!first_name.isNullOrEmpty() && first_name.length >= 6)
@@ -82,7 +85,6 @@ object CreateEventValidator {
         return ValidationResult(status = true)
     }
 
-//    fun validateArtists(artistsUsernames: List<String>): ValidationResult {
     fun validateArtists(artistsUsernames: List<Artist>): ValidationResult {
         return if (artistsUsernames.isNotEmpty()) {
             ValidationResult(status = true)

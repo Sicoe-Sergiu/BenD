@@ -1,5 +1,7 @@
 package com.example.bend.view_models
 
+import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bend.model.Event
@@ -37,9 +39,47 @@ class ProfileViewModel : ViewModel() {
         FirebaseFirestore.getInstance().collection("followers")
 
 
-    val isLoading = MutableStateFlow(false).asStateFlow()
-    private val usersCollectionNames = listOf<String>("artist", "event_founder", "user")
+    val userData: MutableLiveData<Pair<String, MutableMap<String, Any>?>> = MutableLiveData()
+    val userEvents: MutableLiveData<List<Event>> = MutableLiveData()
+    val userFollowers: MutableLiveData<Int> = MutableLiveData()
+    val userFollowing: MutableLiveData<Int> = MutableLiveData()
 
+    val isLoading: MutableLiveData<Boolean> = MutableLiveData(false)
+
+    private val usersCollectionNames = listOf("artist", "event_founder", "user")
+
+    fun refreshFollowersAndFollowing(userUUID: String) {
+        viewModelScope.launch {
+            userFollowers.value = getUserFollowers(userUUID)
+            userFollowing.value = getUserFollowing(userUUID)
+        }
+    }
+    fun refreshUserData(userUUID: String) {
+        Log.e("INSIDE LAUchED", "INSIDE")
+        viewModelScope.launch {
+            isLoading.value = true
+            try {
+                val userDataDeferred = async { getUserDataPair(userUUID) }
+                val userEventsDeferred = async { getUserEvents(userUUID) }
+                val userFollowersDeferred = async { getUserFollowers(userUUID) }
+                val userFollowingDeferred = async { getUserFollowing(userUUID) }
+
+                val results = awaitAll(
+                    userDataDeferred,
+                    userEventsDeferred,
+                    userFollowingDeferred,
+                    userFollowersDeferred
+                )
+
+                userData.value = results[0] as Pair<String, MutableMap<String, Any>?>
+                userEvents.value = results[1] as List<Event>
+                userFollowers.value = results[2] as Int
+                userFollowing.value = results[3] as Int
+                isLoading.value = false
+            } finally {
+            }
+        }
+    }
 
     suspend fun getUserDataMap(userId: String): MutableMap<String, Any>? {
         val db = FirebaseFirestore.getInstance()

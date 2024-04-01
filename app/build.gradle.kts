@@ -89,18 +89,20 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx:24.10.0")
 //    grid
     implementation ("androidx.compose.foundation:foundation:1.2.0")
-//  photo picker
+//      photo picker
     implementation ("io.coil-kt:coil-compose:2.4.0")
-//    photo crop
 
 //    date+time
     implementation ("io.github.vanpra.compose-material-dialogs:datetime:0.8.1-rc")
     coreLibraryDesugaring ("com.android.tools:desugar_jdk_libs:1.1.6")
 //    preview
     debugImplementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
-//refresh
+//    refresh
     implementation("com.google.accompanist:accompanist-swiperefresh:0.27.0")
     implementation ("com.github.krottv:compose-sliders:0.1.14")
+//    splashscreen
+    implementation ("androidx.core:core-splashscreen:1.0.0-beta01")
+
 
 
 }

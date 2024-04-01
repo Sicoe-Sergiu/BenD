@@ -213,8 +213,6 @@ class AddEditEventViewModel : ViewModel() {
                     }
             }
         }
-
-
     }
     private suspend fun deleteEventArtistWithEventUUID(eventUUID: String) {
 

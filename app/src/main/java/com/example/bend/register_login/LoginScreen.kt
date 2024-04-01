@@ -31,7 +31,7 @@ import com.example.bend.ui.theme.green
 import com.example.bend.view_models.LoginViewModel
 
 @Composable
-fun SignInScreen(
+fun LoginScreen(
     navController:NavController,
     loginViewModel: LoginViewModel = viewModel()
 ) {

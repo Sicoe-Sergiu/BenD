@@ -377,7 +377,7 @@ fun ActionBarLayout(
             .background(color = Color.White, shape = RoundedCornerShape(16.dp)),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        // Attend/Unattend Button
+
         if (enabled)
             MyIconButton(
                 painter = painterResource(
@@ -389,7 +389,7 @@ fun ActionBarLayout(
 
             )
 
-        // Attendees Count
+
         Text(
             text = "$attendeesCount People Attend",
             fontWeight = FontWeight.Bold,
@@ -397,12 +397,12 @@ fun ActionBarLayout(
             maxLines = 1
         )
 
-        // Repost Button
+
         MyIconButton(
             painter = painterResource(id = R.drawable.repost),
             onClick = onRepostClick,
             modifier = Modifier,
-            enabled = true // Assuming repost is always enabled, adjust as necessary
+            enabled = true
         )
     }
 }

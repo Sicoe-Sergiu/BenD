@@ -1,6 +1,7 @@
 package com.example.bend.activities
 
 import android.os.Bundle
+import android.window.SplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -11,8 +12,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.bend.Constants
 import com.example.bend.register_login.ResetPasswordScreen
-import com.example.bend.register_login.SignInScreen
-import com.example.bend.register_login.SignUpScreen
+import com.example.bend.register_login.LoginScreen
+import com.example.bend.register_login.RegisterScreen
 import com.example.bend.ui.screens.AddReviewScreen
 import com.example.bend.ui.screens.AddEditEventScreen
 import com.example.bend.ui.screens.FeedScreen
@@ -23,12 +24,16 @@ import com.example.bend.ui.screens.SingleEventScreen
 import com.example.bend.view_models.HomeViewModel
 import com.example.bend.view_models.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.bend.ui.theme.BenDTheme
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        installSplashScreen()
         setContent {
+
             val navController = rememberNavController()
             val firebaseAuth = FirebaseAuth.getInstance()
             val currentUser = firebaseAuth.currentUser
@@ -43,15 +48,15 @@ class MainActivity : ComponentActivity() {
 
             NavHost(
                 navController = navController,
-                startDestination = Constants.NAVIGATION_SEARCH_PAGE
+                startDestination = Constants.NAVIGATION_HOME_PAGE
             ) {
                 // Screen for signing in
                 composable(Constants.NAVIGATION_LOGIN_PAGE) {
-                    SignInScreen(navController = navController)
+                    LoginScreen(navController = navController)
                 }
                 // Screen for signing up
                 composable(Constants.NAVIGATION_REGISTER_PAGE) {
-                    SignUpScreen(navController = navController)
+                    RegisterScreen(navController = navController)
                 }
                 // Screen for resetting password
                 composable(Constants.NAVIGATION_FORGOT_PASS_PAGE) {
@@ -68,9 +73,14 @@ class MainActivity : ComponentActivity() {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val userId = backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
+                    val userId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
                     userId?.let { uid ->
-                        ProfileScreen(userUUID = uid, navController = navController, viewModel = profileViewModel)
+                        ProfileScreen(
+                            userUUID = uid,
+                            navController = navController,
+                            profileViewModel = profileViewModel
+                        )
                     }
                 }
                 // Screen for a single event
@@ -80,9 +90,14 @@ class MainActivity : ComponentActivity() {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    val eventId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
                     eventId?.let { eid ->
-                        SingleEventScreen(eventUUID = eid, viewModel = mainViewModel, navController = navController)
+                        SingleEventScreen(
+                            eventUUID = eid,
+                            viewModel = mainViewModel,
+                            navController = navController
+                        )
                     }
                 }
                 // Screen for editing an event
@@ -92,9 +107,31 @@ class MainActivity : ComponentActivity() {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    val eventId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
                     eventId?.let { eid ->
-                        AddEditEventScreen(eventUUID = eid, navController = navController, editMode = true)
+                        AddEditEventScreen(
+                            eventUUID = eid,
+                            navController = navController,
+                            editMode = true
+                        )
+                    }
+                }
+                // Screen for editing an user
+                composable(
+                    Constants.NAVIGATION_EDIT_USER_PAGE,
+                    arguments = listOf(navArgument(Constants.NAVIGATION_USER_UUID_ARGUMENT) {
+                        type = NavType.StringType
+                    })
+                ) { backStackEntry ->
+                    val userUID =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
+                    userUID?.let { uid ->
+                        RegisterScreen(
+                            userUUID = uid,
+                            navController = navController,
+                            editMode = true
+                        )
                     }
                 }
                 // Screen for adding a review to an event
@@ -104,7 +141,8 @@ class MainActivity : ComponentActivity() {
                         type = NavType.StringType
                     })
                 ) { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
+                    val eventId =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_EVENT_UUID_ARGUMENT)
                     eventId?.let { eid ->
                         AddReviewScreen(eventUUID = eid, navController = navController)
                     }
@@ -122,6 +160,7 @@ class MainActivity : ComponentActivity() {
                     MyEventsScreen(navController = navController)
                 }
             }
+
         }
     }
 }

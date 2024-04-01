@@ -79,6 +79,7 @@ fun AddEditEventScreen(
     }
     var posterButtonText = "Add Poster"
     var saveButtonText = "Add Event"
+
     if (editMode){
         posterButtonText = "Edit Poster"
         saveButtonText = "Save Changes"
