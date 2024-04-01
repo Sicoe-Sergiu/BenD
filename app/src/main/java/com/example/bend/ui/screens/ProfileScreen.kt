@@ -204,13 +204,12 @@ fun ProfileContent(
     userUUID: String,
     innerPadding: PaddingValues
 ) {
-    var followButtonState by remember { mutableStateOf(true) }
-
     val userData by viewModel.userData.observeAsState()
     val userEvents by viewModel.userEvents.observeAsState(emptyList())
     val userFollowers by viewModel.userFollowers.observeAsState(0)
     val userFollowing by viewModel.userFollowing.observeAsState(0)
     val isRefreshing by viewModel.isLoading.observeAsState(initial = false)
+    val followState by viewModel.followState.collectAsState()
 
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
 
@@ -218,52 +217,62 @@ fun ProfileContent(
         viewModel.refreshUserData(userUUID)
     }
 
-    LaunchedEffect(followButtonState) {
-        followButtonState = !viewModel.ifFollow(userUUID)
-        viewModel.refreshFollowersAndFollowing(userUUID)
-    }
-
     var selectedTabIndex by remember { mutableStateOf(0) }
+    SwipeRefresh(
+        state = swipeRefreshState,
+        onRefresh = { viewModel.refreshUserData(userUUID) },
+        modifier = Modifier.background(Color.White)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isRefreshing) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else {
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isRefreshing) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else {
-            SwipeRefresh(
-                state = swipeRefreshState,
-                onRefresh = { viewModel.refreshUserData(userUUID) },
-                modifier = Modifier.background(Color.White)
-            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Ensure userData is not null before calling ProfileSection
                     userData?.let {
                         ProfileSection(it, userEvents.size, userFollowers, userFollowing)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     ButtonSection(
-                        modifier = Modifier.fillMaxWidth(),
-                        viewModel,
-                        userUUID,
-                        isFollowButtonVisible = followButtonState,
-                        onFollowButtonClick = { followButtonState = !followButtonState }
+                        viewModel = viewModel,
+                        userUUID = userUUID,
+                        isFollowButtonVisible = followState != true,
+                        onFollowButtonClick = {
+                            if (followState == true) {
+                                viewModel.unfollow(userUUID)
+                            } else {
+                                viewModel.follow(userUUID)
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.height(5.dp))
 
-                    PostTabView(imageWithTexts = listOf(
-                        ImageWithText(image = painterResource(id = R.drawable.future), text = "Future Events"),
-                        ImageWithText(image = painterResource(id = R.drawable.time_past), text = "Past Events")
-                    )) {
+                    PostTabView(
+                        imageWithTexts = listOf(
+                            ImageWithText(
+                                image = painterResource(id = R.drawable.future),
+                                text = "Future Events"
+                            ),
+                            ImageWithText(
+                                image = painterResource(id = R.drawable.time_past),
+                                text = "Past Events"
+                            )
+                        )
+                    ) {
                         selectedTabIndex = it
                     }
                     when (selectedTabIndex) {
                         0 -> PostSection(
                             events = userEvents.filter { event ->
-                                LocalDate.parse(event.endDate, DateTimeFormatter.ofPattern("yyyy-MM-dd")) > LocalDate.now()
+                                LocalDate.parse(
+                                    event.endDate,
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                ) > LocalDate.now()
                             },
                             modifier = Modifier.fillMaxWidth(),
                             navController
@@ -271,7 +280,10 @@ fun ProfileContent(
 
                         1 -> PostSection(
                             events = userEvents.filter { event ->
-                                LocalDate.parse(event.endDate, DateTimeFormatter.ofPattern("yyyy-MM-dd")) < LocalDate.now()
+                                LocalDate.parse(
+                                    event.endDate,
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                                ) < LocalDate.now()
                             },
                             modifier = Modifier.fillMaxWidth(),
                             navController
@@ -297,16 +309,13 @@ fun ProfileSection(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Profile Image
         Spacer(modifier = Modifier.height(10.dp))
         ProfileImageSection(imageUrl = userData.second?.get("profilePhotoURL")?.toString() ?: "")
 
-        // User statistics (events, followers, following)
         Spacer(modifier = Modifier.height(10.dp))
 
         StatSection(eventsNo = userEvents, followersNo = userFollowers, followingNo = userFollowing)
 
-        // User description (name, userType)
         Spacer(modifier = Modifier.height(10.dp))
 
         ProfileDescription(
@@ -341,20 +350,16 @@ fun ProfileImageSection(imageUrl: String) {
 
 @Composable
 fun ButtonSection(
-    modifier: Modifier = Modifier,
     viewModel: ProfileViewModel,
     userUUID: String,
     isFollowButtonVisible: Boolean,
     onFollowButtonClick: () -> Unit
 ) {
     Row(
-        modifier = modifier
-            .padding(
-                horizontal = 20.dp
-            )
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
             .fillMaxWidth(),
         horizontalArrangement = Arrangement.Center
-
     ) {
         if (isFollowButtonVisible) {
             FollowButton(viewModel = viewModel, userUUID = userUUID, onClick = onFollowButtonClick)
@@ -468,7 +473,6 @@ fun ProfileDescription(
 fun FollowButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> Unit) {
     Button(
         onClick = {
-            viewModel.follow(userUUID)
             onClick()
         },
         modifier = Modifier
@@ -489,7 +493,6 @@ fun FollowButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> U
 fun FollowingButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> Unit) {
     Button(
         onClick = {
-            viewModel.unfollow(userUUID)
             onClick()
         },
         modifier = Modifier
