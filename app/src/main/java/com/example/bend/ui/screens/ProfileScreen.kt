@@ -3,7 +3,6 @@ package com.example.bend.ui.screens
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,10 +20,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.DropdownMenu
@@ -71,7 +68,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.bend.R
 import com.example.bend.components.BottomNavigationBar2
-import com.example.bend.components.EventComponent
 import com.example.bend.events.RegistrationUIEvent
 import com.example.bend.model.Event
 import com.example.bend.ui.theme.green
@@ -79,11 +75,7 @@ import com.example.bend.view_models.ProfileViewModel
 import com.example.bend.view_models.RegisterViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -97,7 +89,7 @@ fun ProfileScreen(
     var selectedItemIndex by rememberSaveable { mutableStateOf(3) }
 
     Scaffold(
-        topBar = { ProfileTopBar(navController, registerViewModel, profileViewModel) },
+        topBar = { ProfileTopBar(userUUID, navController, registerViewModel, profileViewModel) },
         bottomBar = {
             BottomNavigationBar2(
                 navController = navController,
@@ -112,6 +104,7 @@ fun ProfileScreen(
 
 @Composable
 fun ProfileTopBar(
+    userUUID: String,
     navController: NavController,
     registerViewModel: RegisterViewModel,
     profileViewModel: ProfileViewModel
@@ -129,16 +122,18 @@ fun ProfileTopBar(
         text = userData?.second?.get("username")?.toString() ?: "Default username",
         icons = listOf(
             {
-                Icon(
-                    painter = painterResource(id = R.drawable.plus_sym),
-                    contentDescription = "Add event",
-                    tint = Color.Black,
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clickable {
-                            navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
-                        }
-                )
+                if (userData?.first == "event_founder" && userUUID == FirebaseAuth.getInstance().currentUser?.uid){
+                    Icon(
+                        painter = painterResource(id = R.drawable.plus_sym),
+                        contentDescription = "Add event",
+                        tint = Color.Black,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clickable {
+                                navController.navigate(Constants.NAVIGATION_CREATE_EVENT_PAGE)
+                            }
+                    )
+                }
             },
             {
                 Icon(
@@ -223,7 +218,11 @@ fun ProfileContent(
         onRefresh = { viewModel.refreshUserData(userUUID) },
         modifier = Modifier.background(Color.White)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.LightGray)
+        ) {
             if (isRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
@@ -237,21 +236,24 @@ fun ProfileContent(
                     userData?.let {
                         ProfileSection(it, userEvents.size, userFollowers, userFollowing)
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    ButtonSection(
-                        viewModel = viewModel,
-                        userUUID = userUUID,
-                        isFollowButtonVisible = followState != true,
-                        onFollowButtonClick = {
-                            if (followState == true) {
-                                viewModel.unfollow(userUUID)
-                            } else {
-                                viewModel.follow(userUUID)
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(5.dp))
-
+                    Box(
+                        modifier = Modifier
+                            .background(Color.White)
+                            .padding(vertical = 15.dp)
+                    ) {
+                        ButtonSection(
+                            viewModel = viewModel,
+                            userUUID = userUUID,
+                            isFollowButtonVisible = followState != true,
+                            onFollowButtonClick = {
+                                if (followState == true) {
+                                    viewModel.unfollow(userUUID)
+                                } else {
+                                    viewModel.follow(userUUID)
+                                }
+                            }, navController = navController
+                        )
+                    }
                     PostTabView(
                         imageWithTexts = listOf(
                             ImageWithText(
@@ -266,28 +268,32 @@ fun ProfileContent(
                     ) {
                         selectedTabIndex = it
                     }
-                    when (selectedTabIndex) {
-                        0 -> PostSection(
-                            events = userEvents.filter { event ->
-                                LocalDate.parse(
-                                    event.endDate,
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                ) > LocalDate.now()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            navController
-                        )
+                    val futureEvents = userEvents.filter { event ->
+                        LocalDate.parse(
+                            event.endDate,
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                        ) > LocalDate.now()
+                    }
+                    val pastEvents = userEvents.filter { event ->
+                        LocalDate.parse(
+                            event.endDate,
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                        ) < LocalDate.now()
+                    }
+                    Box(modifier = Modifier.background(Color.LightGray)) {
+                        when (selectedTabIndex) {
+                            0 -> if (futureEvents.isEmpty()) EmptyPlaceholder(text = "No future Events to display.") else PostSection(
+                                events = futureEvents,
+                                modifier = Modifier.fillMaxWidth(),
+                                navController
+                            )
 
-                        1 -> PostSection(
-                            events = userEvents.filter { event ->
-                                LocalDate.parse(
-                                    event.endDate,
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                                ) < LocalDate.now()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            navController
-                        )
+                            1 -> if (pastEvents.isEmpty()) EmptyPlaceholder(text = "No past Events to display.") else PostSection(
+                                events = pastEvents,
+                                modifier = Modifier.fillMaxWidth(),
+                                navController
+                            )
+                        }
                     }
                 }
             }
@@ -305,18 +311,27 @@ fun ProfileSection(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .background(Color.White),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(10.dp))
         ProfileImageSection(imageUrl = userData.second?.get("profilePhotoURL")?.toString() ?: "")
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        StatSection(eventsNo = userEvents, followersNo = userFollowers, followingNo = userFollowing)
+        StatSection(
+            eventsNo = userEvents,
+            followersNo = userFollowers,
+            followingNo = userFollowing,
+            rating = userData.second?.get("rating") as? Double ?: 0.0,
+            ratingNo = userData.second?.get("ratingsNumber") as? Long ?: 0L,
+            displayRating = (userData.first == "event_founder" || userData.first == "artist")
 
-        Spacer(modifier = Modifier.height(10.dp))
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         ProfileDescription(
             displayName = (
@@ -324,13 +339,12 @@ fun ProfileSection(
                             " " +
                             (userData.second?.get("firstName")?.toString()
                                 ?: "Default first name") +
-                            " (" +
                             when (userData.first) {
-                                "user" -> "User"
-                                "event_founder" -> "Event Organizer"
-                                "artist" -> "Artist"
+                                "user" -> ""
+                                "event_founder" -> " (Event Organizer)"
+                                "artist" -> " (Artist)"
                                 else -> "Unknown"
-                            } + ")"
+                            }
                     ),
             phone = (userData.second?.get("phone")?.toString() ?: ""),
             email = (userData.second?.get("email")?.toString() ?: ""),
@@ -353,30 +367,52 @@ fun ButtonSection(
     viewModel: ProfileViewModel,
     userUUID: String,
     isFollowButtonVisible: Boolean,
-    onFollowButtonClick: () -> Unit
+    onFollowButtonClick: () -> Unit,
+    navController: NavController
 ) {
+    val userData = viewModel.userData.observeAsState()
+
     Row(
         modifier = Modifier
             .padding(horizontal = 20.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .background(Color.White),
         horizontalArrangement = Arrangement.Center
     ) {
-        if (isFollowButtonVisible) {
-            FollowButton(viewModel = viewModel, userUUID = userUUID, onClick = onFollowButtonClick)
-        } else {
-            FollowingButton(
+        if (userUUID != FirebaseAuth.getInstance().currentUser?.uid) {
+            if (isFollowButtonVisible) {
+                RoundCornersButton(
+                    text = "Follow",
+                    viewModel = viewModel,
+                    userUUID = userUUID,
+                    onClick = onFollowButtonClick
+                )
+            } else {
+                GreenRoundCornersButton(
+                    viewModel = viewModel,
+                    userUUID = userUUID,
+                    onClick = onFollowButtonClick
+                )
+            }
+        }
+        if (userData.value?.first == "event_founder")
+            RoundCornersButton(
+                text = "Reviews",
                 viewModel = viewModel,
                 userUUID = userUUID,
-                onClick = onFollowButtonClick
-            )
-        }
+                onClick = { navController.navigate(Constants.founderReviewNavigation(userUUID)) })
     }
 }
 
 @Composable
 fun StatSection(
     modifier: Modifier = Modifier,
-    eventsNo: Int, followersNo: Int, followingNo: Int
+    eventsNo: Int,
+    followersNo: Int,
+    followingNo: Int,
+    rating: Double?,
+    ratingNo: Long?,
+    displayRating: Boolean
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -386,6 +422,12 @@ fun StatSection(
         ProfileStat(numberText = eventsNo.toString(), text = "Events")
         ProfileStat(numberText = followersNo.toString(), text = "Followers")
         ProfileStat(numberText = followingNo.toString(), text = "Following")
+        if (displayRating)
+            ProfileStat(
+                numberText = String.format("%.1f", (rating!! / ratingNo!!)) + " / 5",
+                text = "Rating"
+            )
+
     }
 }
 
@@ -470,7 +512,12 @@ fun ProfileDescription(
 }
 
 @Composable
-fun FollowButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> Unit) {
+fun RoundCornersButton(
+    text: String,
+    viewModel: ProfileViewModel,
+    userUUID: String,
+    onClick: () -> Unit
+) {
     Button(
         onClick = {
             onClick()
@@ -484,13 +531,13 @@ fun FollowButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> U
         elevation = ButtonDefaults.buttonElevation(8.dp)
     ) {
         Text(
-            "Follow",
+            text,
         )
     }
 }
 
 @Composable
-fun FollowingButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> Unit) {
+fun GreenRoundCornersButton(viewModel: ProfileViewModel, userUUID: String, onClick: () -> Unit) {
     Button(
         onClick = {
             onClick()
@@ -524,6 +571,7 @@ fun PostTabView(
         backgroundColor = Color.Transparent,
         contentColor = Color.Black,
         modifier = modifier
+            .background(Color.White)
     ) {
         imageWithTexts.forEachIndexed { index, item ->
             Tab(
@@ -594,6 +642,7 @@ fun PostSection(
         columns = GridCells.Fixed(3),
         modifier = modifier
             .scale(1.01f)
+
     ) {
         items(events.size) {
             AsyncImage(

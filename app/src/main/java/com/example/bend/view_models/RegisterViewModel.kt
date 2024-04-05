@@ -503,7 +503,7 @@ class RegisterViewModel : ViewModel() {
                                 lastName = registration_ui_state.last_name,
                                 phone = registration_ui_state.phone,
                                 email = registration_ui_state.email,
-                                profilePhotoURL = "",
+                                profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL,
                                 rating = 0f,
                                 ratingsNumber = 0
                             )
@@ -525,7 +525,7 @@ class RegisterViewModel : ViewModel() {
                                 firstName = registration_ui_state.first_name,
                                 lastName = registration_ui_state.last_name,
                                 stageName = registration_ui_state.stage_name,
-                                profilePhotoURL = "",
+                                profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL,
                                 rating = 0f,
                                 ratingsNumber = 0
                             )
@@ -545,7 +545,7 @@ class RegisterViewModel : ViewModel() {
                                 email = registration_ui_state.email,
                                 firstName = registration_ui_state.first_name,
                                 lastName = registration_ui_state.last_name,
-                                profilePhotoURL = ""
+                                profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL
                             )
                             db.collection("user")
                                 .document(uid)
@@ -560,7 +560,7 @@ class RegisterViewModel : ViewModel() {
 
 
                         sign_up_in_progress.value = false
-                        navController.navigate(Constants.NAVIGATION_HOME_PAGE)
+                        navController.navigate(Constants.NAVIGATION_SET_PROFILE_PHOTO_PAGE)
                     }
                 }
                 Log.d(TAG, "InCompleteListener")

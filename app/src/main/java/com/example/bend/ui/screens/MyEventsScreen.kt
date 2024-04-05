@@ -55,7 +55,7 @@ fun MyEventsScreen(
             BottomNavigationBar2(
                 navController = navController,
                 selectedItemIndex = selectedItemIndex,
-                onItemSelected = { selectedItemIndex = it}
+                onItemSelected = { selectedItemIndex = it }
             )
         },
 
@@ -92,8 +92,14 @@ fun MyEventsList(
     Column(modifier = modifier) {
         PostTabView(
             imageWithTexts = listOf(
-                ImageWithText(image = painterResource(id = R.drawable.future), text = "Future Events"),
-                ImageWithText(image = painterResource(id = R.drawable.time_past), text = "Past Events")
+                ImageWithText(
+                    image = painterResource(id = R.drawable.future),
+                    text = "Future Events"
+                ),
+                ImageWithText(
+                    image = painterResource(id = R.drawable.time_past),
+                    text = "Past Events"
+                )
             ),
             onTabSelected = { selectedTabIndex = it },
         )
@@ -110,7 +116,7 @@ fun eventsList(
     events: List<Event>,
     viewModel: MyEventsViewModel,
     navController: NavController,
-    selectedTab:Int
+    selectedTab: Int
 ) {
     SwipeRefresh(
         state = swipeRefreshState,
@@ -119,22 +125,25 @@ fun eventsList(
             .fillMaxSize()
             .background(Color.LightGray)
     ) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            itemsIndexed(events) { _, event ->
+        if (events.isEmpty()) EmptyPlaceholder(text = "No Events to display.") else {
 
-                val founder = remember { mutableStateOf<EventFounder?>(null) }
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                itemsIndexed(events) { _, event ->
 
-                LaunchedEffect(key1 = event.founderUUID) {
-                    founder.value = MyEventsViewModel.getEventFounderByUuid(event.founderUUID)
+                    val founder = remember { mutableStateOf<EventFounder?>(null) }
+
+                    LaunchedEffect(key1 = event.founderUUID) {
+                        founder.value = MyEventsViewModel.getEventFounderByUuid(event.founderUUID)
+                    }
+
+                    SmallEventComponent(
+                        event = event,
+                        founder = founder.value,
+                        viewModel = viewModel,
+                        navController = navController,
+                        selectedTab = selectedTab
+                    )
                 }
-
-                SmallEventComponent(
-                    event = event,
-                    founder = founder.value,
-                    viewModel = viewModel,
-                    navController = navController,
-                    selectedTab = selectedTab
-                )
             }
         }
     }

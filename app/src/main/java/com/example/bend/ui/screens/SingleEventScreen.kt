@@ -43,7 +43,7 @@ fun SingleEventScreen(
 
 
     LaunchedEffect(key1 = eventUUID) {
-        event = viewModel.getEventByUUID(eventUUID) ?: Event()
+        event = HomeViewModel.getEventByUUID(eventUUID) ?: Event()
     }
 
     Scaffold(

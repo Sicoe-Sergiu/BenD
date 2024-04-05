@@ -1,6 +1,7 @@
 package com.example.bend.events
 
 import androidx.navigation.NavController
+import com.example.bend.model.Event
 
 sealed class AddReviewUIEvent{
 

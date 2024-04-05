@@ -25,6 +25,9 @@ import com.example.bend.view_models.HomeViewModel
 import com.example.bend.view_models.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.bend.ui.screens.FounderReviewsScreen
+import com.example.bend.ui.screens.NotificationsScreen
+import com.example.bend.ui.screens.SetProfilePhotoScreen
 import com.example.bend.ui.theme.BenDTheme
 
 
@@ -57,6 +60,10 @@ class MainActivity : ComponentActivity() {
                 // Screen for signing up
                 composable(Constants.NAVIGATION_REGISTER_PAGE) {
                     RegisterScreen(navController = navController)
+                }
+                // Screen for set profile photo
+                composable(Constants.NAVIGATION_SET_PROFILE_PHOTO_PAGE) {
+                    SetProfilePhotoScreen(navController = navController)
                 }
                 // Screen for resetting password
                 composable(Constants.NAVIGATION_FORGOT_PASS_PAGE) {
@@ -134,6 +141,22 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+                // Screen for founder reviews
+                composable(
+                    Constants.NAVIGATION_FOUNDER_REVIEWS_PAGE,
+                    arguments = listOf(navArgument(Constants.NAVIGATION_USER_UUID_ARGUMENT) {
+                        type = NavType.StringType
+                    })
+                ) { backStackEntry ->
+                    val userUID =
+                        backStackEntry.arguments?.getString(Constants.NAVIGATION_USER_UUID_ARGUMENT)
+                    userUID?.let { uid ->
+                        FounderReviewsScreen(
+                            founderUUID = uid,
+                            navController = navController
+                        )
+                    }
+                }
                 // Screen for adding a review to an event
                 composable(
                     Constants.NAVIGATION_ADD_REVIEW_PAGE,
@@ -158,6 +181,13 @@ class MainActivity : ComponentActivity() {
                 // Screen for displaying user's events
                 composable(Constants.NAVIGATION_MY_EVENTS) {
                     MyEventsScreen(navController = navController)
+                }
+                // Screen for displaying user's notifications
+                composable(Constants.NAVIGATION_NOTIFICATIONS_PAGE) {
+                    NotificationsScreen(
+                        homeViewModel = mainViewModel,
+                        navController = navController
+                    )
                 }
             }
 

@@ -44,6 +44,7 @@ import com.example.bend.ui.theme.LightPrimaryColor
 import com.example.bend.ui.theme.LightRed
 import com.example.bend.ui.theme.green
 import com.example.bend.view_models.MyEventsViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SmallEventComponent(
@@ -84,7 +85,6 @@ fun SmallEventComponent(
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(10.dp)
-                .clickable { }
         ) {
             Column(
                 modifier = Modifier
@@ -108,7 +108,7 @@ fun SmallEventComponent(
                         },
                         buttonColor = LightPrimaryColor
                     )
-                    if (selectedTab == 0){
+                    if (selectedTab == 0 && event.founderUUID == FirebaseAuth.getInstance().currentUser?.uid){
                         CustomIconButton(
                             icon = Icons.Filled.Edit,
                             contentDescription = "Edit",
@@ -117,7 +117,7 @@ fun SmallEventComponent(
 
                         )
                     }
-                    if (selectedTab == 1){
+                    if (selectedTab == 1 && event.founderUUID != FirebaseAuth.getInstance().currentUser?.uid){
                         CustomIconButton(
                             icon = Icons.Filled.Reviews,
                             contentDescription = "Review",

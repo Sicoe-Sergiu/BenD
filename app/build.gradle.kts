@@ -87,6 +87,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore-ktx:24.10.0")
+    implementation("com.google.firebase:firebase-messaging")
 //    grid
     implementation ("androidx.compose.foundation:foundation:1.2.0")
 //      photo picker
@@ -102,6 +103,10 @@ dependencies {
     implementation ("com.github.krottv:compose-sliders:0.1.14")
 //    splashscreen
     implementation ("androidx.core:core-splashscreen:1.0.0-beta01")
+
+//    Retrofit for push notifications
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-moshi:2.9.0")
 
 
 

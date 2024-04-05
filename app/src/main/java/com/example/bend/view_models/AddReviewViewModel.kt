@@ -42,16 +42,12 @@ class AddReviewViewModel : ViewModel() {
 
     private val eventsCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event")
-    private val userCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("user")
     private val artistsCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("artist")
     private val eventFounderCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event_founder")
     private val eventArtistCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event_artist")
-    private val userEventCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("user_event")
 
     private var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -82,7 +78,8 @@ class AddReviewViewModel : ViewModel() {
 
             is AddReviewUIEvent.AddReviewButtonClicked -> {
                 navController = review.navController
-                addReview(navController)
+
+                addReview(navController, )
             }
         }
     }
@@ -136,9 +133,10 @@ class AddReviewViewModel : ViewModel() {
         val review = Review(
             uuid = UUID.randomUUID().toString(),
             writerUUID = currentUser!!.uid,
+            eventUUID = event.value!!.uuid,
             userUUID = userUUID,
             reviewText = reviewUiState.value.reviews[reviewNo],
-            System.currentTimeMillis()
+            creationTimestamp = System.currentTimeMillis()
         )
         FirebaseFirestore.getInstance().collection("review").add(review)
             .addOnSuccessListener {

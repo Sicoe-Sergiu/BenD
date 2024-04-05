@@ -62,7 +62,6 @@ class ProfileViewModel : ViewModel() {
     }
 
     fun refreshUserData(userUUID: String) {
-        Log.e("INSIDE LAUchED", "INSIDE")
         viewModelScope.launch {
             isLoading.value = true
             try {
@@ -79,7 +78,9 @@ class ProfileViewModel : ViewModel() {
                 userEvents.value = results[1] as List<Event>
                 isLoading.value = false
             } finally {
+                isLoading.value = false
             }
+            //ADD CATCH ERRORS
         }
     }
 
@@ -102,7 +103,7 @@ class ProfileViewModel : ViewModel() {
     }
 
 
-    suspend fun getUserEvents(userUUID: String): List<Event> {
+    private suspend fun getUserEvents(userUUID: String): List<Event> {
 
         return when (getAccountType(userUUID)) {
             "artist" -> getArtistEvents(userUUID)
@@ -166,58 +167,7 @@ class ProfileViewModel : ViewModel() {
         return emptyList()
     }
 
-    //    suspend fun ifFollow(userUUID: String): Boolean {
-//        return try {
-//            val followersDocuments = followersCollection
-//                .whereEqualTo("userUUID", currentUser?.uid)
-//                .whereEqualTo("followedUserUUID", userUUID)
-//                .get()
-//                .await()
-//
-//            !followersDocuments.isEmpty
-//        } catch (e: Exception) {
-//            // TODO: Handle exception (e.g., log, report, or throw)
-//            false
-//        }
-//    }
-//    fun follow(followedUserUUID: String) {
-//        viewModelScope.launch(Dispatchers.IO) {
-//            try {
-//                val follow = Followers(
-//                    UUID.randomUUID().toString(),
-//                    currentUser?.uid ?: "",
-//                    followedUserUUID
-//                )
-//                followersCollection
-//                    .document(follow.uuid)
-//                    .set(follow)
-//                    .await()
-//                // TODO: Implement success handling on the main thread if needed
-//            } catch (e: Exception) {
-//                // TODO: Implement failure handling on the main thread if needed
-//            }
-//        }
-//    }
-//
-//    fun unfollow(unfollowedUserUUID: String) {
-//        viewModelScope.launch(Dispatchers.IO) {
-//            try {
-//                val documents = followersCollection
-//                    .whereEqualTo("userUUID", currentUser?.uid)
-//                    .whereEqualTo("followedUserUUID", unfollowedUserUUID)
-//                    .get()
-//                    .await()
-//                documents.forEach { document ->
-//                    document.reference.delete().await()
-//                    // TODO: Implement success handling on the main thread if needed
-//                }
-//            } catch (e: Exception) {
-//                // TODO: Implement failure handling on the main thread if needed
-//            }
-//        }
-//    }
-//
-    suspend fun getUserFollowers(userUUID: String): Int {
+    private suspend fun getUserFollowers(userUUID: String): Int {
         try {
             val task = followersCollection.whereEqualTo("followedUserUUID", userUUID).get().await()
             return task.toObjects(Followers::class.java).size
@@ -229,7 +179,7 @@ class ProfileViewModel : ViewModel() {
         return 0;
     }
 
-    suspend fun getUserFollowing(userUUID: String): Int {
+    private suspend fun getUserFollowing(userUUID: String): Int {
         try {
             val task = followersCollection.whereEqualTo("userUUID", userUUID).get().await()
             return task.toObjects(Followers::class.java).size
@@ -241,7 +191,7 @@ class ProfileViewModel : ViewModel() {
         return 0;
     }
 
-    fun checkFollowStatus(userUUID: String) {
+    private fun checkFollowStatus(userUUID: String) {
         viewModelScope.launch {
             val isFollowing = ifFollow(userUUID)
             _followState.value = isFollowing
@@ -300,7 +250,7 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    suspend fun ifFollow(userUUID: String): Boolean {
+    private suspend fun ifFollow(userUUID: String): Boolean {
         return try {
             val followersDocuments = followersCollection
                 .whereEqualTo("userUUID", currentUser?.uid)

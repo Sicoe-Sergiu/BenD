@@ -61,7 +61,7 @@ fun RegisterScreen(
 ) {
 
 
-    if (editMode){
+    if (editMode) {
         Scaffold(
             topBar = {
                 CustomTopBar(
@@ -79,10 +79,21 @@ fun RegisterScreen(
 
             ) {
 
-            RegisterScreenContent(navController = navController, registerViewModel = registerViewModel, editMode = editMode, userUUID = userUUID, modifier = Modifier.padding(it))
+            RegisterScreenContent(
+                navController = navController,
+                registerViewModel = registerViewModel,
+                editMode = editMode,
+                userUUID = userUUID,
+                modifier = Modifier.padding(it)
+            )
         }
-    }else{
-        RegisterScreenContent(navController = navController, registerViewModel = registerViewModel, editMode = editMode, userUUID = userUUID)
+    } else {
+        RegisterScreenContent(
+            navController = navController,
+            registerViewModel = registerViewModel,
+            editMode = editMode,
+            userUUID = userUUID
+        )
     }
 
 }
@@ -100,16 +111,12 @@ fun RegisterScreenContent(
     }
 
     val isUserSet by registerViewModel.isUserSet.collectAsState()
-
-    val artistLiveData = registerViewModel.artist.observeAsState()
-    val userLiveData = registerViewModel.user.observeAsState()
-    val founderLiveData = registerViewModel.founder.observeAsState()
     val userTypeLiveData = registerViewModel.userType.observeAsState()
 
 
 
-    if (editMode){
-        LaunchedEffect(key1 = 1){
+    if (editMode) {
+        LaunchedEffect(key1 = 1) {
             registerViewModel.setUser(userUUID!!)
         }
         registerViewModel.validateEdit()
@@ -129,7 +136,7 @@ fun RegisterScreenContent(
         }
     )
 
-    if (isUserSet){
+    if (isUserSet || !editMode || !registerViewModel.sign_up_in_progress.value) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -145,13 +152,13 @@ fun RegisterScreenContent(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (!editMode){
+                    if (!editMode) {
                         NormalTextComponent(value = "Hey there,")
                         BoldTextComponent(value = "Create an account")
                         Spacer(modifier = Modifier.height(25.dp))
                     }
-                    
-                    if (editMode){
+
+                    if (editMode) {
 //                        TODO:EDIT IMAGE
                         RoundImage(
                             imageUrl = selectedImageUri.toString(),
@@ -203,15 +210,21 @@ fun RegisterScreenContent(
                         errorStatus = registerViewModel.registration_ui_state.value.username_error,
                         initialValue = registerViewModel.registration_ui_state.value.username
                     )
-                    if (!editMode){
+                    if (!editMode) {
                         MyTextFieldComponent(
                             labelValue = "Email",
-                            onTextSelected = { registerViewModel.onEvent(RegistrationUIEvent.EmailChanged(it)) },
+                            onTextSelected = {
+                                registerViewModel.onEvent(
+                                    RegistrationUIEvent.EmailChanged(
+                                        it
+                                    )
+                                )
+                            },
                             errorStatus = registerViewModel.registration_ui_state.value.email_error,
                             initialValue = registerViewModel.registration_ui_state.value.email
                         )
                     }
-                    if (!editMode){
+                    if (!editMode) {
                         MyPasswordFieldComponent(
                             labelValue = "Password",
                             onTextSelected = {
@@ -224,7 +237,7 @@ fun RegisterScreenContent(
                             errorStatus = registerViewModel.registration_ui_state.value.password_error
                         )
                     }
-                    if (!editMode){
+                    if (!editMode) {
                         MyDropDownMenuComponent(
                             label_value = "Account Type",
                             options = arrayOf(
@@ -251,7 +264,7 @@ fun RegisterScreenContent(
                             initialValue = registerViewModel.registration_ui_state.value.stage_name
                         )
                     }
-                    if (registerViewModel.registration_ui_state.value.account_type == "Event Organizer account"|| userTypeLiveData.value == "event_founder") {
+                    if (registerViewModel.registration_ui_state.value.account_type == "Event Organizer account" || userTypeLiveData.value == "event_founder") {
                         MyTextFieldComponent(
                             "Phone",
                             onTextSelected = {
@@ -265,21 +278,21 @@ fun RegisterScreenContent(
                             initialValue = registerViewModel.registration_ui_state.value.phone
                         )
                     }
-                    if (editMode){
+                    if (editMode) {
                         Spacer(modifier = Modifier.height(30.dp))
-                        Log.d("VALIDATIONS:",
-                            registerViewModel.userType.value.toString() +
-                            registerViewModel.photoUriValidationsPassed.value.toString() +
-                                    registerViewModel.first_name_validations_passed.value.toString() +
-                                    registerViewModel.last_name_validations_passed.value.toString() +
-                                    registerViewModel.username_validations_passed.value.toString() +
-                                    registerViewModel.phone_validations_passed.value.toString() +
-                                    registerViewModel.stage_name_validations_passed.value.toString()
-                            )
-                        Log.d("TRY", ((registerViewModel.userType.value.toString() == "event_founder" && registerViewModel.phone_validations_passed.value) ||
-                                (registerViewModel.userType.value.toString() == "artist" && registerViewModel.stage_name_validations_passed.value) ||
-                                registerViewModel.userType.value.toString() == "user"
-                        ).toString())
+//                        Log.d("VALIDATIONS:",
+//                            registerViewModel.userType.value.toString() +
+//                            registerViewModel.photoUriValidationsPassed.value.toString() +
+//                                    registerViewModel.first_name_validations_passed.value.toString() +
+//                                    registerViewModel.last_name_validations_passed.value.toString() +
+//                                    registerViewModel.username_validations_passed.value.toString() +
+//                                    registerViewModel.phone_validations_passed.value.toString() +
+//                                    registerViewModel.stage_name_validations_passed.value.toString()
+//                            )
+//                        Log.d("TRY", ((registerViewModel.userType.value.toString() == "event_founder" && registerViewModel.phone_validations_passed.value) ||
+//                                (registerViewModel.userType.value.toString() == "artist" && registerViewModel.stage_name_validations_passed.value) ||
+//                                registerViewModel.userType.value.toString() == "user"
+//                        ).toString())
                         MyButtonComponent(
                             value = "Save Changes",
                             onButtonClicked = {
@@ -290,7 +303,7 @@ fun RegisterScreenContent(
                                 )
                             },
                             isEnabled =
-                                    registerViewModel.photoUriValidationsPassed.value &&
+                            registerViewModel.photoUriValidationsPassed.value &&
                                     registerViewModel.first_name_validations_passed.value &&
                                     registerViewModel.last_name_validations_passed.value &&
                                     registerViewModel.username_validations_passed.value &&
@@ -303,7 +316,7 @@ fun RegisterScreenContent(
                     }
 
                 }
-                if (!editMode){
+                if (!editMode) {
                     Column {
                         Spacer(modifier = Modifier.height(620.dp))
                         MyButtonComponent(
@@ -331,19 +344,17 @@ fun RegisterScreenContent(
                             onTextSelected = { navController.navigate(Constants.NAVIGATION_LOGIN_PAGE) },
                             initial_text = "Already have an account? ",
                             action_text = "Login",
-                            span_style = SpanStyle(color = green, textDecoration = TextDecoration.Underline)
+                            span_style = SpanStyle(
+                                color = green,
+                                textDecoration = TextDecoration.Underline
+                            )
                         )
                     }
                 }
 
             }
-//        TODO: repair this
-
-//        if(registerViewModel.sign_up_in_progress.value)
-//            CircularProgressIndicator()
-
         }
-    }else{
+    } else {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

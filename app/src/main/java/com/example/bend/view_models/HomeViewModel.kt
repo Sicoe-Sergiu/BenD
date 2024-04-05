@@ -14,6 +14,7 @@ import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
 import com.example.bend.model.EventFounder
 import com.example.bend.model.Followers
+import com.example.bend.model.Notification
 import com.example.bend.model.User
 import com.example.bend.model.UserEvent
 import com.google.firebase.auth.FirebaseAuth
@@ -62,6 +63,9 @@ class HomeViewModel : ViewModel() {
     var homeScreenScrollState: LazyListState by mutableStateOf(LazyListState(0, 0))
 
     val operationCompletedMessage = MutableLiveData<String?>()
+
+    var newNotifications: LiveData<Boolean> = MutableLiveData(false)
+    var notifications: LiveData<List<Notification>> = MutableLiveData(listOf(Notification())) // emptyList()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -216,7 +220,8 @@ class HomeViewModel : ViewModel() {
 
     fun removeEventFromUserList(event: Event) = viewModelScope.launch {
         try {
-            val documents = userEventCollection.whereEqualTo("userUUID", currentUser?.uid)
+            val documents = userEventCollection
+                .whereEqualTo("userUUID", currentUser?.uid)
                 .whereEqualTo("eventUUID", event.uuid).get().await()
 
             documents.forEach { document ->
@@ -246,18 +251,20 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    suspend fun getEventByUUID(eventUUID: String): Event? {
-        try {
-            val task = eventsCollection.whereEqualTo("uuid", eventUUID).get().await()
+    companion object {
+        suspend fun getEventByUUID(eventUUID: String): Event? {
+            try {
+                val task = FirebaseFirestore.getInstance().collection("event").whereEqualTo("uuid", eventUUID).get().await()
 
-            val events = task.toObjects(Event::class.java)
-            return events[0]
-        } catch (e: Exception) {
-            // Handle exceptions
-            e.printStackTrace()
+                val events = task.toObjects(Event::class.java)
+                return events.first()
+            } catch (e: Exception) {
+                // Handle exceptions
+                e.printStackTrace()
+            }
+
+            return null
         }
-
-        return null
     }
 
     fun repostEvent(event: Event) {

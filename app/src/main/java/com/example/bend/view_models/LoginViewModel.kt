@@ -74,7 +74,7 @@ class LoginViewModel: ViewModel() {
 
         val email = login_ui_state.value.email
         val pass = login_ui_state.value.password
-
+        sign_in_in_progress.value = true
         FirebaseAuth
             .getInstance()
             .signInWithEmailAndPassword(email,pass)

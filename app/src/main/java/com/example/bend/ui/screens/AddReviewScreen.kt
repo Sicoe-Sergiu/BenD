@@ -13,14 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.ContentAlpha
 import androidx.compose.material.Divider
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
@@ -36,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,10 +43,8 @@ import com.example.bend.components.CustomSlider
 import com.example.bend.components.CustomTopBar
 import com.example.bend.components.FounderProfile
 import com.example.bend.components.MyButtonComponent
-import com.example.bend.components.MyTextFieldComponent
 import com.example.bend.components.WriteReviewComponent
 import com.example.bend.events.AddReviewUIEvent
-import com.example.bend.events.RegistrationUIEvent
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventFounder

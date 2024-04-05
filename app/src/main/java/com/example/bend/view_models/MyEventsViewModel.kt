@@ -121,17 +121,6 @@ class MyEventsViewModel : ViewModel() {
         return events
     }
 
-    private suspend fun getFounderEvents(userID: String): List<Event> {
-        try {
-            val task = eventsCollection.whereEqualTo("founderUUID", userID).get().await()
-            return task.toObjects(Event::class.java)
-        } catch (e: Exception) {
-            // Handle exceptions
-            e.printStackTrace()
-        }
-
-        return emptyList()
-    }
 
     private suspend fun getAccountType(userUUID: String): String = coroutineScope {
         try {
@@ -180,6 +169,17 @@ class MyEventsViewModel : ViewModel() {
                 println("Error getting documents: $e")
             }
             return null
+        }
+        suspend fun getFounderEvents(userID: String): List<Event> {
+            try {
+                val task = FirebaseFirestore.getInstance().collection("event").whereEqualTo("founderUUID", userID).get().await()
+                return task.toObjects(Event::class.java)
+            } catch (e: Exception) {
+                // Handle exceptions
+                e.printStackTrace()
+            }
+
+            return emptyList()
         }
     }
 
