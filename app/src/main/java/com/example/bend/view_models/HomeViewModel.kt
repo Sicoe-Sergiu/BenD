@@ -13,7 +13,6 @@ import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
 import com.example.bend.model.EventFounder
-import com.example.bend.model.Followers
 import com.example.bend.model.Notification
 import com.example.bend.model.User
 import com.example.bend.model.UserEvent
@@ -49,6 +48,8 @@ class HomeViewModel : ViewModel() {
         FirebaseFirestore.getInstance().collection("event_artist")
     private val userEventCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("user_event")
+    private val notificationCollection: CollectionReference =
+        FirebaseFirestore.getInstance().collection("notification")
 
     var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -65,7 +66,7 @@ class HomeViewModel : ViewModel() {
     val operationCompletedMessage = MutableLiveData<String?>()
 
     var newNotifications: LiveData<Boolean> = MutableLiveData(false)
-    var notifications: LiveData<List<Notification>> = MutableLiveData(listOf(Notification())) // emptyList()
+    var notifications: LiveData<List<Notification>> = MutableLiveData(emptyList()) // emptyList()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -84,13 +85,15 @@ class HomeViewModel : ViewModel() {
             val fetchEventFoundersDeferred = async { fetchEventFounders() }
             val fetchEventArtistsDeferred = async { fetchEventArtists() }
             val accountTypeDeferred = async { getAccountType(currentUser?.uid.toString()) }
+            val fetchNotificationsDeferred = async { fetchNotifications() }
 
             awaitAll(
                 fetchArtistsDeferred,
                 fetchEventsDeferred,
                 fetchEventFoundersDeferred,
                 fetchEventArtistsDeferred,
-                accountTypeDeferred
+                accountTypeDeferred,
+                fetchNotificationsDeferred
             )
 
             withContext(Dispatchers.Main) {
@@ -101,7 +104,7 @@ class HomeViewModel : ViewModel() {
             _isLoading.value = false
         }
     }
-    private suspend fun getAccountType(userUUID: String): String = coroutineScope {
+    suspend fun getAccountType(userUUID: String): String = coroutineScope {
         try {
             val artistSnapshotDeferred =
                 async { artistsCollection.document(userUUID).get().await() }
@@ -134,6 +137,24 @@ class HomeViewModel : ViewModel() {
         } catch (exception: Exception) {
             Log.e(TAG, "Error fetching artists: $exception")
         }
+    }
+    private fun fetchNotifications() {
+        val notificationsListener = notificationCollection
+            .whereEqualTo("toUserUUID", currentUser?.uid)
+            .addSnapshotListener { snapshot, exception ->
+                if (exception != null) {
+                    Log.e(TAG, "Error listening for notification changes: $exception")
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && !snapshot.isEmpty) {
+                    val localNotifications = snapshot.toObjects(Notification::class.java)
+                    (notifications as MutableLiveData).postValue(localNotifications)
+                    Log.d(TAG, "Notifications updated: $localNotifications")
+                } else {
+                    Log.e(TAG, "No notifications found")
+                }
+            }
     }
 
     private suspend fun fetchEvents() {
@@ -262,7 +283,42 @@ class HomeViewModel : ViewModel() {
                 // Handle exceptions
                 e.printStackTrace()
             }
+            return null
+        }
+        suspend fun getUserByUUID(userUUID: String): User? {
+            try {
+                val task = FirebaseFirestore.getInstance().collection("user").whereEqualTo("uuid", userUUID).get().await()
 
+                val users = task.toObjects(User::class.java)
+                return users.first()
+            } catch (e: Exception) {
+                // Handle exceptions
+                e.printStackTrace()
+            }
+            return null
+        }
+        suspend fun getFounderByUUID(founderUUID: String): EventFounder? {
+            try {
+                val task = FirebaseFirestore.getInstance().collection("event_founder").whereEqualTo("uuid", founderUUID).get().await()
+
+                val founders = task.toObjects(EventFounder::class.java)
+                return founders.first()
+            } catch (e: Exception) {
+                // Handle exceptions
+                e.printStackTrace()
+            }
+            return null
+        }
+        suspend fun getArtistByUUID(artistUUID: String): Artist? {
+            try {
+                val task = FirebaseFirestore.getInstance().collection("artist").whereEqualTo("uuid", artistUUID).get().await()
+
+                val artists = task.toObjects(Artist::class.java)
+                return artists.first()
+            } catch (e: Exception) {
+                // Handle exceptions
+                e.printStackTrace()
+            }
             return null
         }
     }
@@ -270,4 +326,15 @@ class HomeViewModel : ViewModel() {
     fun repostEvent(event: Event) {
         // TODO: Implement reposting logic
     }
+    fun getTimeDifferenceDisplay(timestamp: Long): String {
+        val timeDiffMillis = System.currentTimeMillis() - timestamp
+        val timeDiffHours = timeDiffMillis / (1000 * 60 * 60)
+        val timeDiffDays = timeDiffHours / 24
+
+        return when {
+            timeDiffHours < 24 -> "${timeDiffHours}h"
+            else -> "${timeDiffDays}d"
+        }
+    }
+
 }

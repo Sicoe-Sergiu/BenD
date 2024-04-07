@@ -2,10 +2,12 @@ package com.example.bend.model
 
 data class Notification (
     val uuid: String,
-    val text: String,
+    val fromUserUUID: String,
+    val toUserUUID: String,
     val eventUUID:String,
-    val timestamp: Long
-
+    val text: String,
+    val timestamp: Long,
+    val sensitive:Boolean
 ){
-    constructor(): this("","","", System.currentTimeMillis())
+    constructor(): this("","","","","", System.currentTimeMillis(), false)
 }

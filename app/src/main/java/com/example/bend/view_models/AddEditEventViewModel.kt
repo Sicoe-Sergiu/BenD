@@ -126,6 +126,8 @@ class AddEditEventViewModel : ViewModel() {
                     editEvent(navController)
                 }
             }
+
+            else -> {}
         }
     }
 
