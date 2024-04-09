@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,11 +63,15 @@ fun NotificationsScreen(
     homeViewModel: HomeViewModel,
     navController: NavController
 ) {
+    val newNotifications = homeViewModel.newNotifications.observeAsState()
     Scaffold(
         topBar = {
             CustomTopBar({
                 BackButton {
                     navController.popBackStack()
+                    for (notification in newNotifications.value!!)
+                        homeViewModel.seeNotification(notification.uuid)
+
                 }
             }, text = "Notifications", icons = listOf {})
         },
@@ -98,14 +103,30 @@ fun NotificationsList(
             .fillMaxSize()
             .background(Color.LightGray)
     ) {
+
         val sortedNotifications = notifications.value.sortedByDescending { it.timestamp }
         if (notifications.value.isEmpty()) EmptyPlaceholder(text = "No Notifications to display.") else {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (sortedNotifications.filter { !it.seen }.isNotEmpty()) {
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                itemsIndexed(sortedNotifications) { _, notification ->
-                    NotificationItem(notification, homeViewModel, navController)
+                    TextDivider(text = "New")
+                    LazyColumn() {
+                        itemsIndexed(sortedNotifications.filter { !it.seen }) { _, notification ->
+                            NotificationItem(notification, homeViewModel, navController)
+                        }
+                    }
+                }
+                TextDivider(text = "Old")
+                LazyColumn() {
+                    itemsIndexed(sortedNotifications.filter { it.seen }) { _, notification ->
+                        NotificationItem(notification, homeViewModel, navController)
+                    }
                 }
             }
+
+
         }
     }
 }
@@ -177,8 +198,7 @@ fun NotificationItem(
             RoundImage(
                 imageUrl = userProfilePhotoDownloadUrl,
                 modifier = Modifier
-                    .weight(0.14f)
-                    .size(40.dp)
+                    .size(50.dp)
                     .aspectRatio(1f)
                     .clip(CircleShape)
                     .clickable { navController.navigate(Constants.userProfileNavigation(notification.fromUserUUID)) }
@@ -235,4 +255,20 @@ fun CustomStyledText(
     }
 
     Text(text = formattedText, fontSize = 16.sp, modifier = modifier)
+}
+
+@Composable
+fun TextDivider(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Divider(
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        Divider(
+            modifier = Modifier.weight(1f)
+        )
+    }
 }

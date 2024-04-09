@@ -23,16 +23,24 @@ class ProfilePhotoViewModel : ViewModel() {
     fun uploadPhotoToFirebase(navController: NavController) {
         Log.d("LOG URI", photoUri.toString())
 
-        val storageRef: StorageReference =
-            storage.reference.child("profile_photos/${currentUser?.uid}")
+        if (photoUri == null) {
+            navController.navigate(Constants.NAVIGATION_HOME_PAGE)
+        } else {
+            val storageRef: StorageReference =
+                storage.reference.child("profile_photos/${currentUser?.uid}")
 
-        photoUri?.let {
-            storageRef.putFile(it)
-                .addOnSuccessListener {
-                    storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-                        updateProfilePhotoUrlInAllCollections(documentId = currentUser?.uid ?: "", newProfilePhotoUrl = downloadUrl.toString(), navController = navController)
+            photoUri?.let {
+                storageRef.putFile(it)
+                    .addOnSuccessListener {
+                        storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+                            updateProfilePhotoUrlInAllCollections(
+                                documentId = currentUser?.uid ?: "",
+                                newProfilePhotoUrl = downloadUrl.toString(),
+                                navController = navController
+                            )
+                        }
                     }
-                }
+            }
         }
     }
 
@@ -54,15 +62,25 @@ class ProfilePhotoViewModel : ViewModel() {
                     documentReference.update("profilePhotoURL", newProfilePhotoUrl)
                         .addOnSuccessListener {
                             // Log success
-                            Log.d("FirestoreUpdate", "Document in $collectionName updated successfully")
+                            Log.d(
+                                "FirestoreUpdate",
+                                "Document in $collectionName updated successfully"
+                            )
                             navController.navigate(Constants.NAVIGATION_HOME_PAGE)
                         }
                         .addOnFailureListener { e ->
                             // Log failure
-                            Log.e("FirestoreUpdate", "Error updating document in $collectionName", e)
+                            Log.e(
+                                "FirestoreUpdate",
+                                "Error updating document in $collectionName",
+                                e
+                            )
                         }
                 } else {
-                    Log.d("FirestoreUpdate", "Document with ID $documentId not found in $collectionName")
+                    Log.d(
+                        "FirestoreUpdate",
+                        "Document with ID $documentId not found in $collectionName"
+                    )
                 }
             }.addOnFailureListener { e ->
                 // Log failure to get the document

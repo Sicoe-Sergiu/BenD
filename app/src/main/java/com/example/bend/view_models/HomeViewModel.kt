@@ -9,6 +9,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bend.Constants
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
@@ -65,8 +66,8 @@ class HomeViewModel : ViewModel() {
 
     val operationCompletedMessage = MutableLiveData<String?>()
 
-    var newNotifications: LiveData<Boolean> = MutableLiveData(false)
-    var notifications: LiveData<List<Notification>> = MutableLiveData(emptyList()) // emptyList()
+    var newNotifications: LiveData<List<Notification>> = MutableLiveData(emptyList())
+    var notifications: LiveData<List<Notification>> = MutableLiveData(emptyList())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -104,6 +105,7 @@ class HomeViewModel : ViewModel() {
             _isLoading.value = false
         }
     }
+
     suspend fun getAccountType(userUUID: String): String = coroutineScope {
         try {
             val artistSnapshotDeferred =
@@ -138,6 +140,7 @@ class HomeViewModel : ViewModel() {
             Log.e(TAG, "Error fetching artists: $exception")
         }
     }
+
     private fun fetchNotifications() {
         val notificationsListener = notificationCollection
             .whereEqualTo("toUserUUID", currentUser?.uid)
@@ -150,6 +153,7 @@ class HomeViewModel : ViewModel() {
                 if (snapshot != null && !snapshot.isEmpty) {
                     val localNotifications = snapshot.toObjects(Notification::class.java)
                     (notifications as MutableLiveData).postValue(localNotifications)
+                    (newNotifications as MutableLiveData).postValue(localNotifications.filter { !it.seen })
                     Log.d(TAG, "Notifications updated: $localNotifications")
                 } else {
                     Log.e(TAG, "No notifications found")
@@ -275,7 +279,8 @@ class HomeViewModel : ViewModel() {
     companion object {
         suspend fun getEventByUUID(eventUUID: String): Event? {
             try {
-                val task = FirebaseFirestore.getInstance().collection("event").whereEqualTo("uuid", eventUUID).get().await()
+                val task = FirebaseFirestore.getInstance().collection("event")
+                    .whereEqualTo("uuid", eventUUID).get().await()
 
                 val events = task.toObjects(Event::class.java)
                 return events.first()
@@ -285,9 +290,11 @@ class HomeViewModel : ViewModel() {
             }
             return null
         }
+
         suspend fun getUserByUUID(userUUID: String): User? {
             try {
-                val task = FirebaseFirestore.getInstance().collection("user").whereEqualTo("uuid", userUUID).get().await()
+                val task = FirebaseFirestore.getInstance().collection("user")
+                    .whereEqualTo("uuid", userUUID).get().await()
 
                 val users = task.toObjects(User::class.java)
                 return users.first()
@@ -297,9 +304,11 @@ class HomeViewModel : ViewModel() {
             }
             return null
         }
+
         suspend fun getFounderByUUID(founderUUID: String): EventFounder? {
             try {
-                val task = FirebaseFirestore.getInstance().collection("event_founder").whereEqualTo("uuid", founderUUID).get().await()
+                val task = FirebaseFirestore.getInstance().collection("event_founder")
+                    .whereEqualTo("uuid", founderUUID).get().await()
 
                 val founders = task.toObjects(EventFounder::class.java)
                 return founders.first()
@@ -309,9 +318,11 @@ class HomeViewModel : ViewModel() {
             }
             return null
         }
+
         suspend fun getArtistByUUID(artistUUID: String): Artist? {
             try {
-                val task = FirebaseFirestore.getInstance().collection("artist").whereEqualTo("uuid", artistUUID).get().await()
+                val task = FirebaseFirestore.getInstance().collection("artist")
+                    .whereEqualTo("uuid", artistUUID).get().await()
 
                 val artists = task.toObjects(Artist::class.java)
                 return artists.first()
@@ -321,20 +332,63 @@ class HomeViewModel : ViewModel() {
             }
             return null
         }
+
+        suspend fun sendNotification(toUserUUID: String, fromUserUUID: String, text:String, eventUUID: String = ""){
+            try {
+                val notification = Notification(
+                    uuid = UUID.randomUUID().toString(),
+                    fromUserUUID = fromUserUUID,
+                    toUserUUID = toUserUUID,
+                    eventUUID = eventUUID,
+                    text = text,
+                    timestamp = System.currentTimeMillis(),
+                    sensitive = false,
+                )
+                FirebaseFirestore.getInstance()
+                    .collection("notification")
+                    .document(notification.uuid)
+                    .set(notification)
+                    .await()
+            }catch (e: Exception){
+                Log.d("ADD NOTIFICATION ERROR", e.printStackTrace().toString())
+            }
+        }
     }
 
     fun repostEvent(event: Event) {
         // TODO: Implement reposting logic
     }
+
     fun getTimeDifferenceDisplay(timestamp: Long): String {
         val timeDiffMillis = System.currentTimeMillis() - timestamp
-        val timeDiffHours = timeDiffMillis / (1000 * 60 * 60)
+        val timeDiffMinutes = timeDiffMillis / (1000 * 60)
+        val timeDiffHours = timeDiffMinutes / 60
         val timeDiffDays = timeDiffHours / 24
 
         return when {
+            timeDiffMinutes < 60 -> "${timeDiffMinutes}m"
             timeDiffHours < 24 -> "${timeDiffHours}h"
             else -> "${timeDiffDays}d"
         }
+    }
+
+
+    fun seeNotification(notificationUUID: String) {
+
+        FirebaseFirestore
+            .getInstance()
+            .collection("notification")
+            .document(notificationUUID)
+            .update("seen", true)
+            .addOnSuccessListener {
+                // Handle success (optional)
+                println("Notification successfully updated")
+            }
+            .addOnFailureListener { e ->
+                // Handle failure (optional)
+                e.printStackTrace()
+            }
+
     }
 
 }

@@ -1,5 +1,6 @@
 package com.example.bend.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -14,11 +15,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,11 +35,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.bend.ui.theme.BenDTheme
 import com.example.bend.ui.theme.PrimaryText
 import com.example.bend.ui.theme.Secondary
 import com.example.bend.ui.theme.green
 import com.vanpra.composematerialdialogs.MaterialDialog
+import com.vanpra.composematerialdialogs.datetime.date.DatePickerColors
 import com.vanpra.composematerialdialogs.datetime.date.datepicker
+import com.vanpra.composematerialdialogs.datetime.time.TimePickerDefaults
 import com.vanpra.composematerialdialogs.datetime.time.timepicker
 import com.vanpra.composematerialdialogs.rememberMaterialDialogState
 import java.time.LocalDate
@@ -174,6 +180,7 @@ fun DatePicker(
             }
     )
 
+
     MaterialDialog(
         dialogState = dateDialogState,
         buttons = {
@@ -181,7 +188,9 @@ fun DatePicker(
                 defaultDate = true
             }
             negativeButton(text = "Cancel")
-        }
+        },
+        border = BorderStroke(1.dp, Color.Black)
+
     ) {
         datepicker(
             initialDate = LocalDate.now(),
@@ -191,7 +200,7 @@ fun DatePicker(
                     it > graterThan
                 else
                     true
-            }
+            },
         ) {
             pickedDate = it
             onTextSelected(it)
@@ -249,16 +258,27 @@ fun TimePicker(
     MaterialDialog(
         dialogState = timeDialogState,
         buttons = {
-            positiveButton(text = "Ok") {
+            positiveButton(
+                text = "Ok"
+            ) {
                 defaultTime = true
             }
             negativeButton(text = "Cancel")
-        }
+        },
+        border = BorderStroke(1.dp, Color.Black)
     ) {
         timepicker(
             initialTime = LocalTime.NOON,
             title = "Pick a time",
-            timeRange = LocalTime.MIDNIGHT..LocalTime.NOON
+            colors = TimePickerDefaults.colors(
+                activeBackgroundColor = green,
+                activeTextColor = PrimaryText,
+                inactiveBackgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                inactiveTextColor = PrimaryText,
+                selectorColor = green,
+                headerTextColor = PrimaryText
+            ),
+            is24HourClock = true
         ) {
             pickedTime = it
             onTextSelected(it)
@@ -267,22 +287,23 @@ fun TimePicker(
 }
 
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WriteReviewComponent(
-    labelValue:String,
+    labelValue: String,
     initialValue: String = "",
     onTextSelected: (String) -> Unit,
-    errorStatus:Boolean = false
-){
+    errorStatus: Boolean = false
+) {
     val textValue = remember {
         mutableStateOf(initialValue)
     }
 
     OutlinedTextField(
-        modifier = Modifier.fillMaxWidth(). padding(16.dp),
-        label = {Text(text = labelValue)},
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        label = { Text(text = labelValue) },
         colors = TextFieldDefaults.outlinedTextFieldColors(
             focusedBorderColor = PrimaryText,
             focusedLabelColor = PrimaryText,

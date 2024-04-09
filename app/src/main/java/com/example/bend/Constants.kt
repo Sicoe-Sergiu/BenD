@@ -31,4 +31,12 @@ object Constants {
     fun founderReviewNavigation(userUUID : String) = "founderReviewsPage/$userUUID"
 
     const val DEFAULT_PROFILE_PHOTO_URL = "https://firebasestorage.googleapis.com/v0/b/bend-c82c1.appspot.com/o/default_profile_photo%2Fdef_profile_photo.jpg?alt=media&token=5b7c625e-d504-4be2-b743-3b6184c0b07e"
+
+    const val NEW_FOLLOWER = "started following you."
+
+    const val NEW_EVENT = "added a new Event."
+    const val EDITED_EVENT = "has modified an event you are attending."
+    const val DELETED_EVENT = "has deleted an event you wanted to attend."
+
+    const val ARTIST_PERFORM = "will perform to a new Event."
 }

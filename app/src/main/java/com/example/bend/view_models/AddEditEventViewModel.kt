@@ -13,6 +13,7 @@ import com.example.bend.events.CreateEventUIEvent
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
+import com.example.bend.model.Followers
 import com.example.bend.register_login.CreateEventValidator
 import com.example.bend.ui_state.CreateEventUiState
 import com.google.firebase.auth.FirebaseAuth
@@ -23,6 +24,7 @@ import com.google.firebase.storage.StorageReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
@@ -157,13 +159,15 @@ class AddEditEventViewModel : ViewModel() {
                     firestore.collection("event").document(updatedEvent.uuid)
                         .set(updatedEvent, SetOptions.merge())
                         .addOnSuccessListener {
-                            viewModelScope.launch(Dispatchers.IO){
+                            viewModelScope.launch(Dispatchers.IO) {
                                 deleteEventArtistWithEventUUID(eventUUID = updatedEvent.uuid)
-                                for (artist in createEventUiState.value.artists){
-                                    firestore.collection("event_artist").add(EventArtist(artist.uuid, updatedEvent.uuid))
+                                for (artist in createEventUiState.value.artists) {
+                                    firestore.collection("event_artist")
+                                        .add(EventArtist(artist.uuid, updatedEvent.uuid))
                                 }
-                                navController.navigate(Constants.NAVIGATION_MY_EVENTS)
-
+                                withContext(Dispatchers.Main) {
+                                    navController.navigate(Constants.NAVIGATION_MY_EVENTS)
+                                }
                             }
                         }
                     println("Document update successful!")
@@ -193,12 +197,19 @@ class AddEditEventViewModel : ViewModel() {
                                     firestore.collection("event").document(updatedEvent.uuid)
                                         .set(updatedEvent, SetOptions.merge())
                                         .addOnSuccessListener {
-                                            viewModelScope.launch(Dispatchers.IO){
+                                            viewModelScope.launch(Dispatchers.IO) {
                                                 deleteEventArtistWithEventUUID(eventUUID = updatedEvent.uuid)
-                                                for (artist in createEventUiState.value.artists){
-                                                    firestore.collection("event_artist").add(EventArtist(artist.uuid, updatedEvent.uuid))
+                                                for (artist in createEventUiState.value.artists) {
+                                                    firestore.collection("event_artist").add(
+                                                        EventArtist(
+                                                            artist.uuid,
+                                                            updatedEvent.uuid
+                                                        )
+                                                    )
                                                 }
-                                                navController.navigate(Constants.NAVIGATION_MY_EVENTS)
+                                                withContext(Dispatchers.Main) {
+                                                    navController.navigate(Constants.NAVIGATION_MY_EVENTS)
+                                                }
                                             }
                                         }
                                     println("Document update successful!")
@@ -216,6 +227,7 @@ class AddEditEventViewModel : ViewModel() {
             }
         }
     }
+
     private suspend fun deleteEventArtistWithEventUUID(eventUUID: String) {
 
         val querySnapshot = firestore.collection("event_artist")
@@ -275,43 +287,97 @@ class AddEditEventViewModel : ViewModel() {
     }
 
     private fun createEventInDatabase(eventUUID: UUID, posterDownloadLink: String) {
-        val currentUserUID = currentUser?.uid ?: ""
-        val createEventState = createEventUiState.value
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentUserUID = currentUser?.uid ?: return@launch
+            val createEventState = createEventUiState.value
 
-        val event = Event(
-            uuid = eventUUID.toString(),
-            location = createEventState.location,
-            entranceFee = createEventState.entranceFee,
-            startDate = createEventState.startDate.toString(),
-            endDate = createEventState.endDate.toString(),
-            startTime = createEventState.startTime.toString(),
-            endTime = createEventState.endTime.toString(),
-            founderUUID = currentUserUID,
-            posterDownloadLink = posterDownloadLink,
-            creationTimestamp = System.currentTimeMillis()
-        )
+            val event = Event(
+                uuid = eventUUID.toString(),
+                location = createEventState.location,
+                entranceFee = createEventState.entranceFee,
+                startDate = createEventState.startDate.toString(),
+                endDate = createEventState.endDate.toString(),
+                startTime = createEventState.startTime.toString(),
+                endTime = createEventState.endTime.toString(),
+                founderUUID = currentUserUID,
+                posterDownloadLink = posterDownloadLink,
+                creationTimestamp = System.currentTimeMillis()
+            )
 
-        val db = FirebaseFirestore.getInstance()
-        val eventDocRef = db.collection("event").document(eventUUID.toString())
+            val db = FirebaseFirestore.getInstance()
 
-        db.runBatch { batch ->
-            batch.set(eventDocRef, event)
+            try {
+                // Create the event document
+                db.collection("event").document(eventUUID.toString()).set(event).await()
+                val artists: MutableList<Artist> = emptyList<Artist>().toMutableList()
+                // Handle event artists and notifications
+                createEventState.artists.forEach { artist ->
+                    val eventArtist = EventArtist(
+                        artistUUID = artist.uuid,
+                        eventUUID = eventUUID.toString()
+                    )
+                    db.collection("event_artist").add(eventArtist).await()
+                    artists.add(artist)
+                }
 
-            createEventState.artists.forEach { artist ->
-                val eventArtist = EventArtist(
-                    artistUUID = artist.uuid,
-                    eventUUID = eventUUID.toString()
-                )
-                val eventArtistDocRef = db.collection("event_artist").document()
+                // Optionally, notify followers of the new event outside the forEach loop
+                notifyFollowersOfNewEvent(db, event)
+                notifyFollowersOfEventPerformance(db, artists, event)
 
-                batch.set(eventArtistDocRef, eventArtist)
+                withContext(Dispatchers.Main) {
+                    // Handle UI updates or navigation
+                    Log.d("EVENT", "Event and event artists added successfully")
+                    navController.navigate(Constants.userProfileNavigation(currentUserUID))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    // Handle errors on the main thread, show error messages to the user
+                    Log.e("EVENT", "Error adding event or event artists", e)
+                }
             }
-        }.addOnSuccessListener {
-            Log.d("EVENT", "Event and event artists added successfully")
-            navController.navigate(Constants.userProfileNavigation(currentUserUID))
-        }.addOnFailureListener { e ->
-            Log.e("EVENT", "Error adding event or event artists: $e")
-            // Handle failure
+        }
+    }
+    private suspend fun notifyFollowersOfEventPerformance(db: FirebaseFirestore, artists: List<Artist>, event: Event) {
+        artists.forEach { artist ->
+            try {
+                val followersSnapshot = db.collection("followers")
+                    .whereEqualTo("followedUserUUID", artist.uuid)
+                    .get().await()
+
+                for (document in followersSnapshot.documents) {
+                    val follower = document.toObject(Followers::class.java) ?: continue
+                    HomeViewModel.sendNotification(
+                        toUserUUID = follower.userUUID,
+                        fromUserUUID = artist.uuid,
+                        text = Constants.ARTIST_PERFORM,
+                        eventUUID = event.uuid
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("EVENT", "Error notifying followers of artist performance", e)
+            }
+        }
+    }
+
+
+    private suspend fun notifyFollowersOfNewEvent(db: FirebaseFirestore, event: Event) {
+        try {
+            val followersSnapshot = db.collection("followers")
+                .whereEqualTo("followedUserUUID", event.founderUUID)
+                .get().await()
+
+            for (document in followersSnapshot) {
+                val follow = document.toObject(Followers::class.java) ?: continue
+                // Assuming sendNotification is a suspend function that sends a notification
+                HomeViewModel.sendNotification(
+                    toUserUUID = follow.userUUID,
+                    fromUserUUID = event.founderUUID,
+                    text = Constants.NEW_EVENT,
+                    eventUUID = event.uuid
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("EVENT", "Error notifying followers", e)
         }
     }
 
@@ -450,16 +516,16 @@ class AddEditEventViewModel : ViewModel() {
         Log.d(TAG, createEventUiState.toString())
     }
 
-    private fun getArtistStageNames(): LiveData<List<String>> {
-        val stageNamesLiveData: MutableLiveData<List<String>> = MutableLiveData()
-
-        artistsLiveData.observeForever { artistsList ->
-            val stageNameList = artistsList.map { it.stageName }
-            stageNamesLiveData.value = stageNameList
-        }
-        Log.d("LOG@222 ", stageNamesLiveData.value.toString())
-        return stageNamesLiveData
-    }
+//    private fun getArtistStageNames(): LiveData<List<String>> {
+//        val stageNamesLiveData: MutableLiveData<List<String>> = MutableLiveData()
+//
+//        artistsLiveData.observeForever { artistsList ->
+//            val stageNameList = artistsList.map { it.stageName }
+//            stageNamesLiveData.value = stageNameList
+//        }
+//        Log.d("LOG@222 ", stageNamesLiveData.value.toString())
+//        return stageNamesLiveData
+//    }
 
     private fun fetchArtistsFromFirestore() {
         firestore.collection("artist")

@@ -116,7 +116,7 @@ fun RegisterScreenContent(
 
 
     if (editMode) {
-        LaunchedEffect(key1 = 1) {
+        LaunchedEffect(key1 = userUUID) {
             registerViewModel.setUser(userUUID!!)
         }
         registerViewModel.validateEdit()
@@ -136,7 +136,7 @@ fun RegisterScreenContent(
         }
     )
 
-    if (isUserSet || !editMode || !registerViewModel.sign_up_in_progress.value) {
+    if (isUserSet || (!editMode && !registerViewModel.sign_up_in_progress.value)) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center

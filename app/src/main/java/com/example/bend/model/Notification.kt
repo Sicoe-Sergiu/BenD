@@ -7,7 +7,8 @@ data class Notification (
     val eventUUID:String,
     val text: String,
     val timestamp: Long,
-    val sensitive:Boolean
+    val sensitive:Boolean,
+    val seen: Boolean = false
 ){
     constructor(): this("","","","","", System.currentTimeMillis(), false)
 }

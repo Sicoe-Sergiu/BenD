@@ -40,14 +40,14 @@ fun FeedScreen(
 ) {
     val events = homeViewModel.events.observeAsState()
     var selectedItemIndex by rememberSaveable { mutableStateOf(0) }
-    var newNotifications = homeViewModel.newNotifications.observeAsState()
+    val newNotifications = homeViewModel.newNotifications.observeAsState()
 
     Scaffold(
         topBar = {
             CustomTopBar(
                 text = "BenD",
                 icons = listOf {
-                    if (newNotifications.value == false) {
+                    if (newNotifications.value?.isNotEmpty() == false) {
                         Icon(
                             painter = painterResource(id = R.drawable.notifications_inactive),
                             contentDescription = "Notifications",

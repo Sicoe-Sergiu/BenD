@@ -1,12 +1,13 @@
 package com.example.bend.view_models
 
 import android.util.Log
-import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bend.Constants
 import com.example.bend.model.Event
 import com.example.bend.model.Followers
+import com.example.bend.model.Notification
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
@@ -16,7 +17,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -214,6 +214,11 @@ class ProfileViewModel : ViewModel() {
                 withContext(Dispatchers.Main) {
                     _followState.value = true
                     refreshFollowersAndFollowing(followedUserUUID)
+                    HomeViewModel.sendNotification(
+                        toUserUUID = followedUserUUID,
+                        fromUserUUID = currentUser.uid,
+                        text = Constants.NEW_FOLLOWER
+                        )
                     // TODO: Show success feedback to user
                 }
             } catch (e: Exception) {
@@ -291,7 +296,7 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    suspend fun getUserDataPair(userUUID: String): Pair<String, MutableMap<String, Any>?> {
+    private suspend fun getUserDataPair(userUUID: String): Pair<String, MutableMap<String, Any>?> {
         return Pair(getAccountType(userUUID), getUserDataMap(userUUID))
     }
 }

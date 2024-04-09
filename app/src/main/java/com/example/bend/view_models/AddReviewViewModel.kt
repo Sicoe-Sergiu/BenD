@@ -79,7 +79,7 @@ class AddReviewViewModel : ViewModel() {
             is AddReviewUIEvent.AddReviewButtonClicked -> {
                 navController = review.navController
 
-                addReview(navController, )
+                addReview(navController)
             }
         }
     }

@@ -3,6 +3,7 @@ package com.example.bend.ui.screens
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -395,7 +396,8 @@ fun ButtonSection(
                 )
             }
         }
-        if (userData.value?.first == "event_founder")
+        Log.d("PLM", userData.value?.first.toString())
+        if (userData.value?.first == "event_founder" || userData.value?.first == "artist")
             RoundCornersButton(
                 text = "Reviews",
                 viewModel = viewModel,
