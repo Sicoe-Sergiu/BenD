@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bend.Constants
+import com.example.bend.Notifications
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
 import com.example.bend.model.EventArtist
@@ -234,6 +235,7 @@ class HomeViewModel : ViewModel() {
             user?.let { user ->
                 val userEvent = UserEvent(UUID.randomUUID().toString(), user.uuid, event.uuid)
                 userEventCollection.document(userEvent.uuid).set(userEvent).await()
+                Notifications.notifyAllFollowers(user.uuid, event, Constants.FOLLOWED_USER_ATTEND)
                 updateAttendeesCountForEvent(event, increment = true)
             }
             operationCompletedMessage.postValue("Event added to your list.")
@@ -333,16 +335,16 @@ class HomeViewModel : ViewModel() {
             return null
         }
 
-        suspend fun sendNotification(toUserUUID: String, fromUserUUID: String, text:String, eventUUID: String = ""){
+        suspend fun sendNotification(toUserUUID: String, fromUserUUID: String, text:String, eventUUID: String = "", sensitive :Boolean = false){
             try {
                 val notification = Notification(
                     uuid = UUID.randomUUID().toString(),
                     fromUserUUID = fromUserUUID,
-                    toUserUUID = toUserUUID,
                     eventUUID = eventUUID,
+                    toUserUUID = toUserUUID,
                     text = text,
                     timestamp = System.currentTimeMillis(),
-                    sensitive = false,
+                    sensitive = sensitive,
                 )
                 FirebaseFirestore.getInstance()
                     .collection("notification")

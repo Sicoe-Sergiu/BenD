@@ -5,11 +5,14 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.bend.Constants
+import com.example.bend.Notifications
 import com.example.bend.model.Event
 import com.example.bend.model.EventFounder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -30,20 +33,12 @@ class MyEventsViewModel : ViewModel() {
 
     var accountType: LiveData<String> = MutableLiveData("")
 
-    private val userCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("user")
-    private val artistsCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("artist")
-    private val eventFounderCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("event_founder")
     private val eventsCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event")
     private val eventArtistCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event_artist")
     private val userEventCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("user_event")
-    private val followersCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("followers")
 
     var events: LiveData<List<Event>> = MutableLiveData(emptyList())
 
@@ -100,54 +95,6 @@ class MyEventsViewModel : ViewModel() {
         return events
     }
 
-    private suspend fun getArtistEvents(userID: String): List<Event> {
-        val events = mutableListOf<Event>()
-
-        try {
-            val eventArtistRecords =
-                eventArtistCollection.whereEqualTo("artistUUID", userID).get().await()
-            for (record in eventArtistRecords) {
-                val eventUUID = record.getString("eventUUID")
-                val eventRecords = eventsCollection.whereEqualTo("uuid", eventUUID).get().await()
-                for (event in eventRecords) {
-                    events.add(event.toObject(Event::class.java))
-                }
-            }
-        } catch (e: Exception) {
-            // Handle exceptions
-            e.printStackTrace()
-        }
-
-        return events
-    }
-
-
-    private suspend fun getAccountType(userUUID: String): String = coroutineScope {
-        try {
-            val artistSnapshotDeferred =
-                async { artistsCollection.document(userUUID).get().await() }
-            val founderSnapshotDeferred =
-                async { eventFounderCollection.document(userUUID).get().await() }
-            val userSnapshotDeferred = async { userCollection.document(userUUID).get().await() }
-
-            val (artistSnapshot, founderSnapshot, userSnapshot) = awaitAll(
-                artistSnapshotDeferred,
-                founderSnapshotDeferred,
-                userSnapshotDeferred
-            )
-
-            return@coroutineScope when {
-                artistSnapshot.exists() -> "artist"
-                founderSnapshot.exists() -> "event_founder"
-                userSnapshot.exists() -> "user"
-                else -> ""
-            }
-        } catch (e: Exception) {
-            // Handle exceptions (e.g., log, report, or throw)
-            ""
-        }
-    }
-
     companion object {
         suspend fun getEventFounderByUuid(uuid: String): EventFounder? {
             try {
@@ -181,12 +128,73 @@ class MyEventsViewModel : ViewModel() {
 
             return emptyList()
         }
+        suspend fun getArtistEvents(userID: String): List<Event> {
+            val events = mutableListOf<Event>()
+
+            try {
+                val eventArtistRecords =
+                    FirebaseFirestore.getInstance().collection("event_artist").whereEqualTo("artistUUID", userID).get().await()
+                for (record in eventArtistRecords) {
+                    val eventUUID = record.getString("eventUUID")
+                    val eventRecords = FirebaseFirestore.getInstance().collection("event").whereEqualTo("uuid", eventUUID).get().await()
+                    for (event in eventRecords) {
+                        events.add(event.toObject(Event::class.java))
+                    }
+                }
+            } catch (e: Exception) {
+                // Handle exceptions
+                e.printStackTrace()
+            }
+
+            return events
+        }
+        suspend fun getAccountType(userUUID: String): String = coroutineScope {
+            try {
+                val artistSnapshotDeferred =
+                    async { FirebaseFirestore.getInstance().collection("artist").document(userUUID).get().await() }
+                val founderSnapshotDeferred =
+                    async { FirebaseFirestore.getInstance().collection("event_founder").document(userUUID).get().await() }
+                val userSnapshotDeferred = async { FirebaseFirestore.getInstance().collection("user").document(userUUID).get().await() }
+
+                val (artistSnapshot, founderSnapshot, userSnapshot) = awaitAll(
+                    artistSnapshotDeferred,
+                    founderSnapshotDeferred,
+                    userSnapshotDeferred
+                )
+
+                return@coroutineScope when {
+                    artistSnapshot.exists() -> "artist"
+                    founderSnapshot.exists() -> "event_founder"
+                    userSnapshot.exists() -> "user"
+                    else -> ""
+                }
+            } catch (e: Exception) {
+                // Handle exceptions (e.g., log, report, or throw)
+                ""
+            }
+        }
+        suspend fun checkReviewExists(eventUUID: String): Boolean {
+            val db = FirebaseFirestore.getInstance()
+
+            return try {
+                val querySnapshot = db.collection("review")
+                    .whereEqualTo("eventUUID", eventUUID)
+                    .whereEqualTo("writerUUID", FirebaseAuth.getInstance().currentUser?.uid)
+                    .get()
+                    .await()
+
+                !querySnapshot.isEmpty
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
     }
 
     suspend fun removeEvent(event: Event) {
         when (accountType.value) {
             "artist" -> {
-                deleteFromEventArtist(event.uuid, currentUser?.uid)
+                deleteFromEventArtist(event, currentUser?.uid)
             }
 
             "user" -> {
@@ -194,27 +202,43 @@ class MyEventsViewModel : ViewModel() {
             }
 
             "event_founder" -> {
-                deleteEvent(event.uuid, currentUser?.uid)
+                Log.e("INSIDE event founder delete", event.uuid)
+
+                deleteEvent(event, currentUser?.uid)
             }
         }
 
     }
 
-    private suspend fun deleteFromEventArtist(eventUUID: String, artistUUID: String? = null){
+    private suspend fun deleteFromEventArtist(event: Event, artistUUID: String? = null){
         try {
             val query = if (artistUUID != null) {
                 eventArtistCollection
                     .whereEqualTo("artistUUID", artistUUID)
-                    .whereEqualTo("eventUUID", eventUUID)
+                    .whereEqualTo("eventUUID", event.uuid)
             } else {
                 eventArtistCollection
-                    .whereEqualTo("eventUUID", eventUUID)
+                    .whereEqualTo("eventUUID", event.uuid)
             }
 
             val documents = query.get().await()
 
             documents.forEach { document ->
                 eventArtistCollection.document(document.id).delete().await()
+            }
+            viewModelScope.launch(Dispatchers.IO) {
+                Notifications.notifySingleUser(
+                    toUserUUID = event.founderUUID,
+                    fromUser = artistUUID!!,
+                    event = event,
+                    notificationText = Constants.ARTIST_NO_MORE_PERFORM_TO_ORGANIZER_EVENT,
+                    sensitive = true
+                )
+                Notifications.notifyAllAttendees(
+                    event = event,
+                    notificationText = Constants.ARTIST_NO_MORE_PERFORM,
+                    sensitive = true
+                )
             }
 
             println("All matching documents successfully deleted.")
@@ -248,20 +272,33 @@ class MyEventsViewModel : ViewModel() {
         }
     }
 
-    private suspend fun deleteEvent(eventUUID: String, userUUID: String?) {
+    private suspend fun deleteEvent(event: Event, userUUID: String?) {
         try {
             val documents = eventsCollection
                 .whereEqualTo("founderUUID", userUUID)
-                .whereEqualTo("uuid", eventUUID)
+                .whereEqualTo("uuid", event.uuid)
                 .get()
                 .await()
 
-            documents.forEach { document ->
+            documents.forEachIndexed() {i , document ->
                 eventsCollection.document(document.id).delete().await()
+                if (i == 0){
+                    viewModelScope.launch(Dispatchers.IO) {
+                        Notifications.notifyAllAttendees(
+                            event = event,
+                            notificationText = Constants.DELETED_EVENT,
+                            sensitive = true
+                        )
+                        Notifications.notifyArtistsOfEvent(
+                            event = event,
+                            notificationText = Constants.DELETED_EVENT_FOR_ARTISTS,
+                            sensitive = true
+                        )
+                    }
+                }
                 deleteFromEventUser(document.id)
-                deleteFromEventArtist(document.id)
+                deleteFromEventArtist(document.toObject(Event::class.java))
             }
-
             println("All matching documents successfully deleted.")
             loadMyEvents()
         } catch (e: Exception) {

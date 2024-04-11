@@ -1,16 +1,18 @@
 package com.example.bend.view_models
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.bend.model.Event
-import com.example.bend.model.EventFounder
 import com.example.bend.model.Review
 import com.example.bend.model.User
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class ReviewsViewModel: ViewModel(){
@@ -20,9 +22,9 @@ class ReviewsViewModel: ViewModel(){
     val events: LiveData<List<Event>> = MutableLiveData(emptyList())
 
     companion object {
-        suspend fun getReviewsForEvent(eventUUID: String): List<Review> {
+        suspend fun getReviewsForEventAndFounder(eventUUID: String, founderUUID: String): List<Review> {
             try {
-                val task = FirebaseFirestore.getInstance().collection("review").whereEqualTo("eventUUID", eventUUID).get().await()
+                val task = FirebaseFirestore.getInstance().collection("review").whereEqualTo("eventUUID", eventUUID).whereEqualTo("userUUID", founderUUID).get().await()
                 return task.toObjects(Review::class.java)
 
             } catch (e: Exception) {
@@ -44,13 +46,27 @@ class ReviewsViewModel: ViewModel(){
         }
     }
 
-    fun loadData() {
+    fun loadData(founderUUID: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val accountTypeDeferred = async { MyEventsViewModel.getAccountType(founderUUID) }
+            val accountTypeValue = accountTypeDeferred.await()
 
+            if (accountTypeValue == "artist"){
+                fetchArtistEvents(founderUUID)
+            }else if (accountTypeValue == "event_founder"){
+                fetchFounderEvents(founderUUID)
+            }
+        }
     }
 
-    suspend fun fetchEvents(founderUUID: String) {
+    private suspend fun fetchFounderEvents(founderUUID: String) {
         _isLoading.value = true
         (events as MutableLiveData).postValue(MyEventsViewModel.getFounderEvents(founderUUID))
+        _isLoading.value = false
+    }
+    private suspend fun fetchArtistEvents(artistUUID: String) {
+        _isLoading.value = true
+        (events as MutableLiveData).postValue(MyEventsViewModel.getArtistEvents(artistUUID))
         _isLoading.value = false
     }
 }

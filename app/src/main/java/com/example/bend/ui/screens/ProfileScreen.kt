@@ -270,16 +270,11 @@ fun ProfileContent(
                         selectedTabIndex = it
                     }
                     val futureEvents = userEvents.filter { event ->
-                        LocalDate.parse(
-                            event.endDate,
-                            DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                        ) > LocalDate.now()
+                        LocalDate.parse(event.endDate).isAfter(LocalDate.now().minusDays(1))
                     }
                     val pastEvents = userEvents.filter { event ->
-                        LocalDate.parse(
-                            event.endDate,
-                            DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                        ) < LocalDate.now()
+                        LocalDate.parse(event.endDate).isBefore(LocalDate.now())
+
                     }
                     Box(modifier = Modifier.background(Color.LightGray)) {
                         when (selectedTabIndex) {

@@ -83,7 +83,7 @@ fun MyEventsList(
     var selectedTabIndex by remember { mutableStateOf(0) }
     val today = LocalDate.now()
     val futureEvents = events.filter { event ->
-        LocalDate.parse(event.endDate).isAfter(today)
+        LocalDate.parse(event.endDate).isAfter(today.minusDays(1))
     }
     val pastEvents = events.filter { event ->
         LocalDate.parse(event.endDate).isBefore(today)

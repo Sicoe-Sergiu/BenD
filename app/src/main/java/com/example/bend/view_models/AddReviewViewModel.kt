@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.bend.Constants
+import com.example.bend.Notifications
 import com.example.bend.components.ArtistComponent
 import com.example.bend.components.WriteReviewComponent
 import com.example.bend.events.AddReviewUIEvent
@@ -84,7 +85,7 @@ class AddReviewViewModel : ViewModel() {
         }
     }
 
-    private fun updateFounderRating(){
+    private fun updateFounderRating() {
 
         FirebaseFirestore.getInstance().runTransaction { transaction ->
             val founderDocRef = eventFounderCollection.document(founder.value!!.uuid)
@@ -93,20 +94,30 @@ class AddReviewViewModel : ViewModel() {
             val currentRating = snapshot.getDouble("rating") ?: 0.0
             val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
 
-            val newRatingSum = currentRating + (reviewUiState.value.rates.getOrNull(0) ?: 0.0f).toDouble()
+            val newRatingSum =
+                currentRating + (reviewUiState.value.rates.getOrNull(0) ?: 0.0f).toDouble()
             val newRatingsNumber = currentRatingNumber + 1
 
             transaction.update(founderDocRef, "rating", newRatingSum)
             transaction.update(founderDocRef, "ratingsNumber", newRatingsNumber)
         }
             .addOnSuccessListener {
+                viewModelScope.launch(Dispatchers.IO) {
+                    Notifications.notifySingleUser(
+                        fromUser = currentUser!!.uid,
+                        toUserUUID = founder.value!!.uuid,
+                        event = event.value!!,
+                        notificationText = "You received a new rating: ${String.format("%.2f", reviewUiState.value.rates.getOrNull(0) ?: 0.0f)}"
+                    )
+                }
                 // TODO:Handle success
             }
             .addOnFailureListener { e ->
                 // TODO:Handle failure
             }
     }
-    private fun updateArtistRating(artist: Artist, ratingNo: Int){
+
+    private fun updateArtistRating(artist: Artist, ratingNo: Int) {
 
         FirebaseFirestore.getInstance().runTransaction { transaction ->
             val artistDocRef = artistsCollection.document(artist.uuid)
@@ -115,13 +126,22 @@ class AddReviewViewModel : ViewModel() {
             val currentRating = snapshot.getDouble("rating") ?: 0.0
             val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
 
-            val newRatingSum = currentRating + (reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f).toDouble()
+            val newRatingSum =
+                currentRating + (reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f).toDouble()
             val newRatingsNumber = currentRatingNumber + 1
 
             transaction.update(artistDocRef, "rating", newRatingSum)
             transaction.update(artistDocRef, "ratingsNumber", newRatingsNumber)
         }
             .addOnSuccessListener {
+                viewModelScope.launch(Dispatchers.IO) {
+                    Notifications.notifySingleUser(
+                        fromUser = currentUser!!.uid,
+                        toUserUUID = artist.uuid,
+                        event = event.value!!,
+                        notificationText = "You received a new rating: ${String.format("%.2f", reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f)}"
+                    )
+                }
                 // TODO:Handle success
             }
             .addOnFailureListener { e ->
@@ -129,7 +149,7 @@ class AddReviewViewModel : ViewModel() {
             }
     }
 
-    private fun addReview(userUUID: String, reviewNo: Int){
+    private fun addReview(userUUID: String, reviewNo: Int) {
         val review = Review(
             uuid = UUID.randomUUID().toString(),
             writerUUID = currentUser!!.uid,
@@ -140,6 +160,14 @@ class AddReviewViewModel : ViewModel() {
         )
         FirebaseFirestore.getInstance().collection("review").add(review)
             .addOnSuccessListener {
+                viewModelScope.launch(Dispatchers.IO) {
+                    Notifications.notifySingleUser(
+                        fromUser = currentUser.uid,
+                        toUserUUID = userUUID,
+                        event = event.value!!,
+                        notificationText = "You received a new review: \"${review.reviewText}\""
+                    )
+                }
 //                TODO: handle success
             }
             .addOnFailureListener {
@@ -149,12 +177,12 @@ class AddReviewViewModel : ViewModel() {
 
     private fun addReview(navController: NavController) {
         updateFounderRating()
-        if (reviewUiState.value.reviews[0] != ""){
+        if (reviewUiState.value.reviews[0] != "") {
             addReview(founder.value!!.uuid, 0)
         }
         artists.value?.forEachIndexed { index, artist ->
             updateArtistRating(artist, index + 1)
-            if (reviewUiState.value.reviews[index + 1] != ""){
+            if (reviewUiState.value.reviews[index + 1] != "") {
                 addReview(artist.uuid, index + 1)
             }
         }

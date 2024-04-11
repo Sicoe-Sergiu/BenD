@@ -1,5 +1,6 @@
 package com.example.bend.components
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 
@@ -57,6 +58,9 @@ fun SmallEventComponent(
 ) {
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var removeEventTrigger by remember { mutableStateOf(0) }
+    var accountType by remember { mutableStateOf("") }
+    var alreadyReviewed by remember { mutableStateOf(false) }
+
 
     if (showConfirmationDialog) {
         ConfirmationDialog(
@@ -73,6 +77,10 @@ fun SmallEventComponent(
         if (removeEventTrigger > 0) {
             viewModel.removeEvent(event)
         }
+        accountType = FirebaseAuth.getInstance().currentUser?.uid?.let { MyEventsViewModel.getAccountType(it)}
+            .toString()
+        alreadyReviewed = MyEventsViewModel.checkReviewExists(event.uuid)
+        Log.d("ALREADYREV", alreadyReviewed.toString())
     }
 
     Box(
@@ -117,7 +125,8 @@ fun SmallEventComponent(
 
                         )
                     }
-                    if (selectedTab == 1 && event.founderUUID != FirebaseAuth.getInstance().currentUser?.uid){
+
+                    if (selectedTab == 1 && accountType == "user" && !alreadyReviewed){
                         CustomIconButton(
                             icon = Icons.Filled.Reviews,
                             contentDescription = "Review",

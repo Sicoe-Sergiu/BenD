@@ -1,5 +1,6 @@
 package com.example.bend.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +41,6 @@ import com.example.bend.Constants
 import com.example.bend.components.CustomTopBar
 import com.example.bend.components.EventDate
 import com.example.bend.model.Event
-import com.example.bend.model.EventFounder
 import com.example.bend.model.Review
 import com.example.bend.model.User
 import com.example.bend.view_models.ReviewsViewModel
@@ -54,7 +54,7 @@ fun FounderReviewsScreen(
     reviewsViewModel: ReviewsViewModel = viewModel()
 ) {
     LaunchedEffect(key1 = founderUUID) {
-        reviewsViewModel.fetchEvents(founderUUID)
+        reviewsViewModel.loadData(founderUUID)
     }
 
     Scaffold(
@@ -63,7 +63,7 @@ fun FounderReviewsScreen(
                 BackButton {
                     navController.popBackStack()
                 }
-            }, text = "Founder name + reviews", icons = listOf {})
+            }, text = "Reviews", icons = listOf {})
         },
         bottomBar = {},
 
@@ -71,7 +71,8 @@ fun FounderReviewsScreen(
         ReviewsList(
             modifier = Modifier.padding(innerPadding),
             reviewsViewModel = reviewsViewModel,
-            navController = navController
+            navController = navController,
+            founderUUID = founderUUID
         )
     }
 }
@@ -80,7 +81,8 @@ fun FounderReviewsScreen(
 fun ReviewsList(
     modifier: Modifier = Modifier,
     reviewsViewModel: ReviewsViewModel,
-    navController: NavController
+    navController: NavController,
+    founderUUID: String
 ) {
     val isRefreshing by reviewsViewModel.isLoading.collectAsState()
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
@@ -88,7 +90,7 @@ fun ReviewsList(
 
     SwipeRefresh(
         state = swipeRefreshState,
-        onRefresh = { reviewsViewModel.loadData() },
+        onRefresh = { reviewsViewModel.loadData(founderUUID) },
         modifier = modifier
             .fillMaxSize()
             .background(Color.LightGray)
@@ -102,8 +104,12 @@ fun ReviewsList(
                     val reviews = remember { mutableStateOf<List<Review>?>(emptyList()) }
 
                     LaunchedEffect(key1 = event.founderUUID) {
-                        reviews.value = ReviewsViewModel.getReviewsForEvent(event.uuid)
+                        reviews.value = ReviewsViewModel.getReviewsForEventAndFounder(event.uuid, founderUUID)
                     }
+//                    Log.d("USER ID", founderUUID)
+//                    Log.d("EVENT", event.toString())
+//                    Log.d("REVIEWS", reviews.value.toString())
+
                     if (reviews.value!!.isNotEmpty()) {
                         EventAndReviews(
                             event = event,

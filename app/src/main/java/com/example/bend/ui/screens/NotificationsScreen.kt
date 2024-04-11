@@ -1,5 +1,6 @@
 package com.example.bend.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -210,7 +211,7 @@ fun NotificationItem(
                 modifier = Modifier.weight(0.7f),
                 homeViewModel = homeViewModel
             )
-            if (notification.eventUUID != "")
+            if (notification.eventUUID != "" && event.posterDownloadLink != "")
                 EventPoster(
                     posterUrl = event.posterDownloadLink,
                     modifier = Modifier
