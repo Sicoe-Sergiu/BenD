@@ -47,5 +47,8 @@ object Constants {
     const val ARTIST_ADDED_TO_NEW_EVENT = "added you to an Event."
     const val ARTIST_REMOVED_FROM_EVENT = "removed you from an Event."
 
+    const val EVENT_REPOST = "reposted an Event."
+    const val FOUNDER_EVENT_REPOST = "reposted your Event."
+
 
 }

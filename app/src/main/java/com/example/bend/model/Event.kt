@@ -12,7 +12,7 @@ data class Event(
     val endDate: String,
     val startTime: String,
     val endTime: String,
-    val creationTimestamp: Long
+    var creationTimestamp: Long
 ){
     constructor() : this(
         UUID.randomUUID().toString(),

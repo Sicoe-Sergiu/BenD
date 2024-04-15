@@ -1,7 +1,6 @@
 package com.example.bend.activities
 
 import android.os.Bundle
-import android.window.SplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -11,24 +10,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.bend.Constants
-import com.example.bend.register_login.ResetPasswordScreen
-import com.example.bend.register_login.LoginScreen
-import com.example.bend.register_login.RegisterScreen
-import com.example.bend.ui.screens.AddReviewScreen
-import com.example.bend.ui.screens.AddEditEventScreen
-import com.example.bend.ui.screens.FeedScreen
-import com.example.bend.ui.screens.MyEventsScreen
-import com.example.bend.ui.screens.ProfileScreen
-import com.example.bend.ui.screens.SearchScreen
-import com.example.bend.ui.screens.SingleEventScreen
-import com.example.bend.view_models.HomeViewModel
-import com.example.bend.view_models.ProfileViewModel
+import com.example.bend.view.screens.ResetPasswordScreen
+import com.example.bend.view.screens.LoginScreen
+import com.example.bend.view.screens.RegisterScreen
+import com.example.bend.view.screens.AddReviewScreen
+import com.example.bend.view.screens.AddEditEventScreen
+import com.example.bend.view.screens.FeedScreen
+import com.example.bend.view.screens.MyEventsScreen
+import com.example.bend.view.screens.ProfileScreen
+import com.example.bend.view.screens.SearchScreen
+import com.example.bend.view.screens.SingleEventScreen
+import com.example.bend.viewmodel.HomeViewModel
+import com.example.bend.viewmodel.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.example.bend.ui.screens.FounderReviewsScreen
-import com.example.bend.ui.screens.NotificationsScreen
-import com.example.bend.ui.screens.SetProfilePhotoScreen
-import com.example.bend.ui.theme.BenDTheme
+import com.example.bend.view.screens.FounderReviewsScreen
+import com.example.bend.view.screens.NotificationsScreen
+import com.example.bend.view.screens.SetProfilePhotoScreen
 
 
 class MainActivity : ComponentActivity() {
