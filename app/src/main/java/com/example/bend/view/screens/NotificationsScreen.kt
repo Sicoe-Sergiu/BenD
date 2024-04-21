@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -55,6 +58,20 @@ fun NotificationsScreen(
     homeViewModel: HomeViewModel,
     navController: NavController
 ) {
+    val context = LocalContext.current
+    val errorMessage = homeViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                homeViewModel.clearError()
+            }
+        }
+    }
+
     val newNotifications = homeViewModel.newNotifications.observeAsState()
     Scaffold(
         topBar = {
@@ -98,22 +115,29 @@ fun NotificationsList(
 
         val sortedNotifications = notifications.value.sortedByDescending { it.timestamp }
         if (notifications.value.isEmpty()) EmptyPlaceholder(text = "No Notifications to display.") else {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (sortedNotifications.filter { !it.seen }.isNotEmpty()) {
-
-                    TextDivider(text = "New")
-                    LazyColumn() {
-                        itemsIndexed(sortedNotifications.filter { !it.seen }) { _, notification ->
-                            NotificationItem(notification, homeViewModel, navController)
-                        }
+            val combinedNotifications: List<Any> by derivedStateOf {
+                mutableListOf<Any>().apply {
+                    val newNotifications = sortedNotifications.filter { !it.seen }
+                    if (newNotifications.isNotEmpty()) {
+                        add("New")
+                        addAll(newNotifications)
                     }
+                    add("Old")
+                    addAll(sortedNotifications.filter { it.seen })
                 }
-                TextDivider(text = "Old")
-                LazyColumn() {
-                    itemsIndexed(sortedNotifications.filter { it.seen }) { _, notification ->
-                        NotificationItem(notification, homeViewModel, navController)
+            }
+            Column(modifier = Modifier.fillMaxSize()) {
+                LazyColumn {
+                    itemsIndexed(combinedNotifications) { index, item ->
+                        when (item) {
+                            is String -> {
+                                TextDivider(text = item)
+                            }
+                            is Notification -> {
+                                NotificationItem(item, homeViewModel, navController)
+                            }
+                            else -> Unit
+                        }
                     }
                 }
             }
@@ -135,12 +159,14 @@ fun NotificationItem(
     var userUsername by remember { mutableStateOf("") }
     var event by remember { mutableStateOf(Event()) }
 
+    val context = LocalContext.current
+
     LaunchedEffect(key1 = notification) {
-        userType = HomeViewModel.getAccountType(notification.fromUserUUID)
-        event = HomeViewModel.getEventByUUID(notification.eventUUID) ?: Event()
+        userType = HomeViewModel.getAccountType(context, notification.fromUserUUID)
+        event = HomeViewModel.getEventByUUID(context, notification.eventUUID) ?: Event()
         when (userType) {
             "user" -> {
-                val user = HomeViewModel.getUserByUUID(notification.fromUserUUID)
+                val user = HomeViewModel.getUserByUUID(context, notification.fromUserUUID)
                 if (user != null) {
                     userProfilePhotoDownloadUrl = user.profilePhotoURL
                     userUsername = user.username
@@ -148,7 +174,7 @@ fun NotificationItem(
             }
 
             "event_founder" -> {
-                val user = HomeViewModel.getFounderByUUID(notification.fromUserUUID)
+                val user = HomeViewModel.getFounderByUUID(context, notification.fromUserUUID)
                 if (user != null) {
                     userProfilePhotoDownloadUrl = user.profilePhotoURL
                     userUsername = user.username
@@ -156,7 +182,7 @@ fun NotificationItem(
             }
 
             "artist" -> {
-                val user = HomeViewModel.getArtistByUUID(notification.fromUserUUID)
+                val user = HomeViewModel.getArtistByUUID(context, notification.fromUserUUID)
                 if (user != null) {
                     userProfilePhotoDownloadUrl = user.profilePhotoURL
                     userUsername = user.username

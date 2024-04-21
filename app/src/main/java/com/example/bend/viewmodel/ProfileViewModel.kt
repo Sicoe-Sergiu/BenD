@@ -1,5 +1,7 @@
 package com.example.bend.viewmodel
 
+import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,15 +23,12 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class ProfileViewModel : ViewModel() {
+    private val TAG = ProfileViewModel::class.simpleName
+
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
 
-    private val userCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("user")
-    private val artistsCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("artist")
-    private val eventFounderCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("event_founder")
+
     private val eventsCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event")
     private val eventArtistCollection: CollectionReference =
@@ -51,6 +50,8 @@ class ProfileViewModel : ViewModel() {
 
     private val _followState = MutableStateFlow<Boolean?>(null)
     val followState: StateFlow<Boolean?> = _followState
+    val errorMessages: LiveData<String> = MutableLiveData()
+
 
     private fun refreshFollowersAndFollowing(userUUID: String) {
         viewModelScope.launch {
@@ -62,23 +63,19 @@ class ProfileViewModel : ViewModel() {
     fun refreshUserData(userUUID: String) {
         viewModelScope.launch {
             isLoading.value = true
-            try {
-                val userDataDeferred = async { getUserDataPair(userUUID) }
-                val userEventsDeferred = async { getUserEvents(userUUID) }
+            val userDataDeferred = async { getUserDataPair(userUUID) }
+            val userEventsDeferred = async { getUserEvents(userUUID) }
 
-                val results = awaitAll(
-                    userDataDeferred,
-                    userEventsDeferred,
-                )
-                checkFollowStatus(userUUID)
-                refreshFollowersAndFollowing(userUUID)
-                userData.value = results[0] as Pair<String, MutableMap<String, Any>?>
-                userEvents.value = results[1] as List<Event>
-                isLoading.value = false
-            } finally {
-                isLoading.value = false
-            }
-            //ADD CATCH ERRORS
+            val results = awaitAll(
+                userDataDeferred,
+                userEventsDeferred,
+            )
+            checkFollowStatus(userUUID)
+            refreshFollowersAndFollowing(userUUID)
+            userData.value = results[0] as Pair<String, MutableMap<String, Any>?>
+            userEvents.value = results[1] as List<Event>
+
+            isLoading.value = false
         }
     }
 
@@ -94,16 +91,20 @@ class ProfileViewModel : ViewModel() {
                     return snapshot.data?.toMutableMap() ?: mutableMapOf()
                 }
             } catch (e: Exception) {
+                val errorMessage = e.localizedMessage ?: "Error fetching user data."
+                Log.e(TAG, errorMessage, e)
                 e.printStackTrace()
+                postError(errorMessage)
             }
         }
         return null
     }
 
 
+
     private suspend fun getUserEvents(userUUID: String): List<Event> {
 
-        return when (getAccountType(userUUID)) {
+        return when (HomeViewModel.getAccountType(null, userUUID)) {
             "artist" -> getArtistEvents(userUUID)
             "event_founder" -> getFounderEvents(userUUID)
             "user" -> getRegularUserEvents(userUUID)
@@ -125,8 +126,10 @@ class ProfileViewModel : ViewModel() {
                 }
             }
         } catch (e: Exception) {
-            // Handle exceptions
+            val errorMessage = e.localizedMessage ?: "Error fetching regular user events."
+            Log.e(TAG, errorMessage, e)
             e.printStackTrace()
+            postError(errorMessage)
         }
 
         return events
@@ -146,8 +149,10 @@ class ProfileViewModel : ViewModel() {
                 }
             }
         } catch (e: Exception) {
-            // Handle exceptions
+            val errorMessage = e.localizedMessage ?: "Error fetching artist events."
+            Log.e(TAG, errorMessage, e)
             e.printStackTrace()
+            postError(errorMessage)
         }
 
         return events
@@ -158,23 +163,28 @@ class ProfileViewModel : ViewModel() {
             val task = eventsCollection.whereEqualTo("founderUUID", userID).get().await()
             return task.toObjects(Event::class.java)
         } catch (e: Exception) {
-            // Handle exceptions
+            val errorMessage = e.localizedMessage ?: "Error fetching founder events."
+            Log.e(TAG, errorMessage, e)
             e.printStackTrace()
+            postError(errorMessage)
         }
 
         return emptyList()
     }
+
 
     private suspend fun getUserFollowers(userUUID: String): Int {
         try {
             val task = followersCollection.whereEqualTo("followedUserUUID", userUUID).get().await()
             return task.toObjects(Followers::class.java).size
         } catch (e: Exception) {
-            // Handle exceptions
+            val errorMessage = e.localizedMessage ?: "Error fetching user followers."
+            Log.e(TAG, errorMessage, e)
             e.printStackTrace()
+            postError(errorMessage)
         }
 
-        return 0;
+        return 0
     }
 
     private suspend fun getUserFollowing(userUUID: String): Int {
@@ -182,11 +192,13 @@ class ProfileViewModel : ViewModel() {
             val task = followersCollection.whereEqualTo("userUUID", userUUID).get().await()
             return task.toObjects(Followers::class.java).size
         } catch (e: Exception) {
-            // Handle exceptions
+            val errorMessage = e.localizedMessage ?: "Error fetching user following."
+            Log.e(TAG, errorMessage, e)
             e.printStackTrace()
+            postError(errorMessage)
         }
 
-        return 0;
+        return 0
     }
 
     private fun checkFollowStatus(userUUID: String) {
@@ -208,7 +220,6 @@ class ProfileViewModel : ViewModel() {
                     .document(follow.uuid)
                     .set(follow)
                     .await()
-                // Successfully followed
                 withContext(Dispatchers.Main) {
                     _followState.value = true
                     refreshFollowersAndFollowing(followedUserUUID)
@@ -216,12 +227,14 @@ class ProfileViewModel : ViewModel() {
                         toUserUUID = followedUserUUID,
                         fromUserUUID = currentUser.uid,
                         text = Constants.NEW_FOLLOWER
-                        )
-                    // TODO: Show success feedback to user
+                    )
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    // TODO: Show error feedback to user
+                    val errorMessage = e.localizedMessage ?: "Error following user."
+                    Log.e(TAG, errorMessage, e)
+                    e.printStackTrace()
+                    postError(errorMessage)
                 }
             }
         }
@@ -238,16 +251,16 @@ class ProfileViewModel : ViewModel() {
                 for (document in documents) {
                     document.reference.delete().await()
                 }
-                // Successfully unfollowed
                 withContext(Dispatchers.Main) {
                     _followState.value = false
                     refreshFollowersAndFollowing(unfollowedUserUUID)
-
-                    // TODO: Show success feedback to user
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    // TODO: Show error feedback to user
+                    val errorMessage = e.localizedMessage ?: "Error unfollowing user."
+                    Log.e(TAG, errorMessage, e)
+                    e.printStackTrace()
+                    postError(errorMessage)
                 }
             }
         }
@@ -263,38 +276,22 @@ class ProfileViewModel : ViewModel() {
 
             followersDocuments.documents.isNotEmpty()
         } catch (e: Exception) {
-            // Handle exception
+            val errorMessage = e.localizedMessage ?: "Error checking follow status."
+            Log.e(TAG, errorMessage, e)
+            e.printStackTrace()
+            postError(errorMessage)
             false
         }
     }
 
-    private suspend fun getAccountType(userUUID: String): String = coroutineScope {
-        try {
-            val artistSnapshotDeferred =
-                async { artistsCollection.document(userUUID).get().await() }
-            val founderSnapshotDeferred =
-                async { eventFounderCollection.document(userUUID).get().await() }
-            val userSnapshotDeferred = async { userCollection.document(userUUID).get().await() }
-
-            val (artistSnapshot, founderSnapshot, userSnapshot) = awaitAll(
-                artistSnapshotDeferred,
-                founderSnapshotDeferred,
-                userSnapshotDeferred
-            )
-
-            return@coroutineScope when {
-                artistSnapshot.exists() -> "artist"
-                founderSnapshot.exists() -> "event_founder"
-                userSnapshot.exists() -> "user"
-                else -> ""
-            }
-        } catch (e: Exception) {
-            // Handle exceptions (e.g., log, report, or throw)
-            ""
-        }
+    private suspend fun getUserDataPair(userUUID: String): Pair<String, MutableMap<String, Any>?> {
+        return Pair(HomeViewModel.getAccountType(null, userUUID), getUserDataMap(userUUID))
+    }
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
     }
 
-    private suspend fun getUserDataPair(userUUID: String): Pair<String, MutableMap<String, Any>?> {
-        return Pair(getAccountType(userUUID), getUserDataMap(userUUID))
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
     }
 }

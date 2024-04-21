@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,9 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -26,8 +30,22 @@ import com.example.bend.viewmodel.ForgotPasswordViewModel
 @Composable
 fun ResetPasswordScreen(
     navController: NavController,
-    reset_password_view_model: ForgotPasswordViewModel = viewModel()
+    resetPasswordViewModel: ForgotPasswordViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val errorMessage = resetPasswordViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                resetPasswordViewModel.clearError()
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
@@ -48,24 +66,24 @@ fun ResetPasswordScreen(
                 MyTextFieldComponent(
                     labelValue = "Email",
                     onTextSelected = {
-                        reset_password_view_model.onEvent(ForgotPassUIEvent.EmailChanged(it))
+                        resetPasswordViewModel.onEvent(ForgotPassUIEvent.EmailChanged(it))
                     },
-                    errorStatus = reset_password_view_model.forgot_pass_ui_state.value.email_error
+                    errorStatus = resetPasswordViewModel.forgotPassUiState.value.emailError
                 )
                 Spacer(modifier = Modifier.height(25.dp))
 
                 MyButtonComponent(
                     value = "Reset Password",
                     onButtonClicked = {
-                        reset_password_view_model.onEvent(ForgotPassUIEvent.ResetButtonClicked(navController))
+                        resetPasswordViewModel.onEvent(ForgotPassUIEvent.ResetButtonClicked(navController))
                     },
-                    isEnabled = reset_password_view_model.email_validation_passed.value
+                    isEnabled = resetPasswordViewModel.emailValidationPassed.value
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
             }
         }
-        if(reset_password_view_model.forgot_pass_in_progress.value)
+        if(resetPasswordViewModel.forgotPassInProgress.value)
             CircularProgressIndicator()
     }
 }

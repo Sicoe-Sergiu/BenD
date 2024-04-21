@@ -1,5 +1,8 @@
 package com.example.bend.viewmodel
 
+import android.content.Context
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -22,51 +25,79 @@ class ReviewsViewModel: ViewModel(){
     val events: LiveData<List<Event>> = MutableLiveData(emptyList())
 
     companion object {
-        suspend fun getReviewsForEventAndFounder(eventUUID: String, founderUUID: String): List<Review> {
+        suspend fun getReviewsForEventAndFounder(context: Context?, eventUUID: String, founderUUID: String): List<Review> {
             try {
-                val task = FirebaseFirestore.getInstance().collection("review").whereEqualTo("eventUUID", eventUUID).whereEqualTo("userUUID", founderUUID).get().await()
+                val task = FirebaseFirestore.getInstance()
+                    .collection("review")
+                    .whereEqualTo("eventUUID", eventUUID)
+                    .whereEqualTo("userUUID", founderUUID)
+                    .get()
+                    .await()
                 return task.toObjects(Review::class.java)
 
             } catch (e: Exception) {
+                val errorMessage = e.localizedMessage ?: "Error fetching reviews for event and founder."
+                Log.e("getReviewsForEventAndFounder", errorMessage, e)
                 e.printStackTrace()
+                if (context != null) {
+                    Toast.makeText(
+                        context,
+                        e.localizedMessage,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
             return emptyList()
         }
-        suspend fun getUserByUUID(userUUID: String): User {
+
+        suspend fun getUserByUUID(context: Context?, userUUID: String): User {
             try {
-                val task = FirebaseFirestore.getInstance().collection("user").whereEqualTo("uuid", userUUID).get().await()
+                val task = FirebaseFirestore.getInstance()
+                    .collection("user")
+                    .whereEqualTo("uuid", userUUID)
+                    .get()
+                    .await()
                 val users = task.toObjects(User::class.java)
                 if (users.isNotEmpty()) {
                     return users.first()
                 }
             } catch (e: Exception) {
+                val errorMessage = e.localizedMessage ?: "Error fetching user by UUID."
+                Log.e("getUserByUUID", errorMessage, e)
                 e.printStackTrace()
+                if (context != null) {
+                    Toast.makeText(
+                        context,
+                        e.localizedMessage,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
             return User()
         }
     }
 
-    fun loadData(founderUUID: String) {
+    fun loadData(context: Context, founderUUID: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val accountTypeDeferred = async { MyEventsViewModel.getAccountType(founderUUID) }
+            val accountTypeDeferred = async { HomeViewModel.getAccountType(null, founderUUID) }
             val accountTypeValue = accountTypeDeferred.await()
 
             if (accountTypeValue == "artist"){
-                fetchArtistEvents(founderUUID)
+                fetchArtistEvents(context, founderUUID)
             }else if (accountTypeValue == "event_founder"){
-                fetchFounderEvents(founderUUID)
+                fetchFounderEvents(context, founderUUID)
             }
         }
     }
 
-    private suspend fun fetchFounderEvents(founderUUID: String) {
+    private suspend fun fetchFounderEvents(context: Context, founderUUID: String) {
         _isLoading.value = true
-        (events as MutableLiveData).postValue(MyEventsViewModel.getFounderEvents(founderUUID))
+        (events as MutableLiveData).postValue(MyEventsViewModel.getFounderEvents(context, founderUUID))
         _isLoading.value = false
     }
-    private suspend fun fetchArtistEvents(artistUUID: String) {
+    private suspend fun fetchArtistEvents(context: Context, artistUUID: String) {
         _isLoading.value = true
-        (events as MutableLiveData).postValue(MyEventsViewModel.getArtistEvents(artistUUID))
+        (events as MutableLiveData).postValue(MyEventsViewModel.getArtistEvents(context, artistUUID))
         _isLoading.value = false
     }
 }

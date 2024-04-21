@@ -2,6 +2,8 @@ package com.example.bend.viewmodel
 
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.example.bend.model.events.ForgotPassUIEvent
@@ -10,65 +12,75 @@ import com.example.bend.view.ui_state.ForgotPasswordUiState
 import com.google.firebase.auth.FirebaseAuth
 
 class ForgotPasswordViewModel: ViewModel() {
+
     private val TAG = ForgotPasswordViewModel::class.simpleName
-    var forgot_pass_ui_state = mutableStateOf(ForgotPasswordUiState())
-
-    var email_validation_passed = mutableStateOf(false)
-
-    var forgot_pass_in_progress = mutableStateOf(false)
-
+    var forgotPassUiState = mutableStateOf(ForgotPasswordUiState())
+    var emailValidationPassed = mutableStateOf(false)
+    var forgotPassInProgress = mutableStateOf(false)
     lateinit var navController: NavController
+    val errorMessages: LiveData<String> = MutableLiveData()
+
 
     fun onEvent(event: ForgotPassUIEvent) {
         when (event) {
             is ForgotPassUIEvent.EmailChanged -> {
-                forgot_pass_ui_state.value = forgot_pass_ui_state.value.copy(email = event.email)
+                forgotPassUiState.value = forgotPassUiState.value.copy(email = event.email)
                 validateEmailDataWithRules()
                 printState()
             }
 
             is ForgotPassUIEvent.ResetButtonClicked -> {
-                validateEmailDataWithRules()
+                validateEmailDataWithRules(finalCheck = true)
                 navController = event.navController
-                if(email_validation_passed.value)
+                if(emailValidationPassed.value)
                     resetPass(navController)
             }
         }
     }
-    private fun validateEmailDataWithRules(){
-        val email_result = RegisterLoginValidator.validateEmail(
-            email = forgot_pass_ui_state.value.email
-        )
-        forgot_pass_ui_state.value = forgot_pass_ui_state.value.copy(
-            email_error = email_result.status,
-        )
-        email_validation_passed.value = email_result.status
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
     }
+
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
+    }
+    private fun validateEmailDataWithRules(finalCheck: Boolean = false) {
+        val email = forgotPassUiState.value.email
+        val result = RegisterLoginValidator.validateEmail(email)
+
+        forgotPassUiState.value = forgotPassUiState.value.copy(
+            emailError = result.status
+        )
+        emailValidationPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate email: ${result.message}")
+        }
+    }
+
     private fun printState() {
         Log.d(TAG,"Inside_printState")
-        Log.d(TAG,forgot_pass_ui_state.toString())
+        Log.d(TAG,forgotPassUiState.toString())
     }
 
     private fun resetPass(navController: NavController) {
+        val email = forgotPassUiState.value.email
 
-        val email = forgot_pass_ui_state.value.email
-
-        FirebaseAuth
-            .getInstance()
-            .sendPasswordResetEmail(email)
-            .addOnCompleteListener{
-                if(it.isSuccessful){
-                    forgot_pass_in_progress.value = false
+        FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    forgotPassInProgress.value = false
                     navController.popBackStack()
                 }
-                Log.d(TAG,"InCompleteListener")
-                Log.d(TAG,"isSuccesfull  = ${it.isSuccessful}")
+                Log.d(TAG, "InCompleteListener")
+                Log.d(TAG, "isSuccessful  = ${task.isSuccessful}")
             }
-            .addOnFailureListener{
-                Log.d(TAG,"InFailureListener")
-                Log.d(TAG,"Exception = ${it.message}")
-                Log.d(TAG,"Exception = ${it.localizedMessage}")
-                forgot_pass_in_progress.value = false
+            .addOnFailureListener { e ->
+                Log.d(TAG, "InFailureListener")
+                Log.d(TAG, "Exception = ${e.message}")
+                Log.d(TAG, "Exception = ${e.localizedMessage}")
+                postError(e.localizedMessage ?: "Unknown error occurred")
+                forgotPassInProgress.value = false
             }
     }
 }

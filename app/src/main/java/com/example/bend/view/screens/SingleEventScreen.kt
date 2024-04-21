@@ -1,6 +1,7 @@
 package com.example.bend.view.screens
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import com.example.bend.model.Artist
 import com.example.bend.view.components.CustomTopBar
@@ -34,12 +36,24 @@ fun SingleEventScreen(
     val founder = remember { mutableStateOf(EventFounder()) }
     val artists = remember { mutableStateOf(listOf<Artist>()) }
 
-    LaunchedEffect(key1 = eventUUID) {
+    val context = LocalContext.current
+    val errorMessage = viewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                viewModel.clearError()
+            }
+        }
     }
+
     LaunchedEffect(key1 = founder, key2 = artists, key3 = eventUUID){
-        event = HomeViewModel.getEventByUUID(eventUUID) ?: Event()
-        founder.value = HomeViewModel.getFounderByUUID(event.founderUUID) ?: EventFounder()
-        artists.value = HomeViewModel.getEventArtistsFromFirebase(event)
+        event = HomeViewModel.getEventByUUID(context, eventUUID) ?: Event()
+        founder.value = HomeViewModel.getFounderByUUID(context, event.founderUUID) ?: EventFounder()
+        artists.value = HomeViewModel.getEventArtistsFromFirebase(context, event)
     }
 
     Scaffold(

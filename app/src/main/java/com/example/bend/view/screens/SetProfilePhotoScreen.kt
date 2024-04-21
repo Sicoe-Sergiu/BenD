@@ -1,6 +1,7 @@
 package com.example.bend.view.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -38,6 +42,19 @@ fun SetProfilePhotoScreen(
     navController: NavController,
     profilePhotoViewModel: ProfilePhotoViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val errorMessage = profilePhotoViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                profilePhotoViewModel.clearError()
+            }
+        }
+    }
 
 
     var selectedImageUri by remember {

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="deploymentTargetDropDown">
-    <multipleDevicesSelectedInDropDown value="true" />
-    <runningDeviceTargetsSelectedWithDialog>
+    <targetSelectedWithDropDown>
       <Target>
-        <type value="RUNNING_DEVICE_TARGET" />
+        <type value="QUICK_BOOT_TARGET" />
         <deviceKey>
           <Key>
             <type value="VIRTUAL_DEVICE_PATH" />
-            <value value="C:\Users\SICOE\.android\avd\Artist.avd" />
+            <value value="C:\Users\SICOE\.android\avd\Phone_3.avd" />
           </Key>
         </deviceKey>
       </Target>
-    </runningDeviceTargetsSelectedWithDialog>
+    </targetSelectedWithDropDown>
+    <timeTargetWasSelectedWithDropDown value="2024-04-21T10:57:20.086966600Z" />
     <targetsSelectedWithDialog>
       <Target>
         <type value="QUICK_BOOT_TARGET" />

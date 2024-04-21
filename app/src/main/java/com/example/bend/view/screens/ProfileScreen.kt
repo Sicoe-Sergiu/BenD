@@ -4,6 +4,7 @@ import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import android.annotation.SuppressLint
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpOffset
@@ -87,6 +89,30 @@ fun ProfileScreen(
     userUUID: String
 ) {
     var selectedItemIndex by rememberSaveable { mutableStateOf(3) }
+    val context = LocalContext.current
+    val profileErrorMessage = profileViewModel.errorMessages.observeAsState()
+    val registerErrorMessage = registerViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(profileErrorMessage.value) {
+        if (profileErrorMessage.value != "") {
+            profileErrorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                profileViewModel.clearError()
+            }
+        }
+    }
+    LaunchedEffect(registerErrorMessage.value) {
+        if (registerErrorMessage.value != "") {
+            registerErrorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                registerViewModel.clearError()
+            }
+        }
+    }
 
     Scaffold(
         topBar = { ProfileTopBar(userUUID, navController, registerViewModel, profileViewModel) },
@@ -122,7 +148,7 @@ fun ProfileTopBar(
         text = userData?.second?.get("username")?.toString() ?: "Default username",
         icons = listOf(
             {
-                if (userData?.first == "event_founder" && userUUID == FirebaseAuth.getInstance().currentUser?.uid){
+                if (userData?.first == "event_founder" && userUUID == FirebaseAuth.getInstance().currentUser?.uid) {
                     Icon(
                         painter = painterResource(id = R.drawable.plus_sym),
                         contentDescription = "Add event",
@@ -418,11 +444,13 @@ fun StatSection(
         ProfileStat(numberText = eventsNo.toString(), text = "Events")
         ProfileStat(numberText = followersNo.toString(), text = "Followers")
         ProfileStat(numberText = followingNo.toString(), text = "Following")
-        if (displayRating)
-            ProfileStat(
-                numberText = String.format("%.1f", (rating!! / ratingNo!!)) + " / 5",
-                text = "Rating"
-            )
+        if (displayRating && rating != 0.0)
+            if (rating != null) {
+                ProfileStat(
+                    numberText = String.format("%.1f", (rating / ratingNo!!)) + " / 5",
+                    text = "Rating"
+                )
+            }
 
     }
 }

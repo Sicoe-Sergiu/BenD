@@ -3,6 +3,8 @@ package com.example.bend.activities
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,6 +29,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.bend.view.screens.FounderReviewsScreen
 import com.example.bend.view.screens.NotificationsScreen
 import com.example.bend.view.screens.SetProfilePhotoScreen
+import com.example.bend.viewmodel.HomeViewModelFactory
 
 
 class MainActivity : ComponentActivity() {
@@ -38,7 +41,9 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             val firebaseAuth = FirebaseAuth.getInstance()
             val currentUser = firebaseAuth.currentUser
-            val mainViewModel: HomeViewModel = viewModel()
+
+
+            val mainViewModel: HomeViewModel = HomeViewModelFactory(appContext = this).create(HomeViewModel::class.java)
             val profileViewModel: ProfileViewModel = viewModel()
 
             val startDestination = if (currentUser != null) {
@@ -46,6 +51,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 Constants.NAVIGATION_REGISTER_PAGE
             }
+
+
 
             NavHost(
                 navController = navController,

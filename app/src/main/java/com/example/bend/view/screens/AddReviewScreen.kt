@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,12 +59,26 @@ fun AddReviewScreen(
     navController: NavController,
     eventUUID: String
 ) {
+    val context = LocalContext.current
+    val errorMessage = viewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                viewModel.clearError()
+            }
+        }
+    }
+
     val isLoading by viewModel.isLoading.collectAsState()
     val event by viewModel.event.observeAsState()
     val founder by viewModel.founder.observeAsState()
     val artists by viewModel.artists.observeAsState()
 
-    LaunchedEffect(key1 = Unit) {
+    LaunchedEffect(key1 = eventUUID) {
         viewModel.loadData(eventUUID)
     }
     Scaffold(

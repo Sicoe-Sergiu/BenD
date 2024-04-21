@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,8 +54,9 @@ fun FounderReviewsScreen(
     navController: NavController,
     reviewsViewModel: ReviewsViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     LaunchedEffect(key1 = founderUUID) {
-        reviewsViewModel.loadData(founderUUID)
+        reviewsViewModel.loadData(context, founderUUID)
     }
 
     Scaffold(
@@ -86,10 +89,12 @@ fun ReviewsList(
     val isRefreshing by reviewsViewModel.isLoading.collectAsState()
     val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
     val events = reviewsViewModel.events.observeAsState(emptyList())
+    val context = LocalContext.current
+
 
     SwipeRefresh(
         state = swipeRefreshState,
-        onRefresh = { reviewsViewModel.loadData(founderUUID) },
+        onRefresh = { reviewsViewModel.loadData(context, founderUUID) },
         modifier = modifier
             .fillMaxSize()
             .background(Color.LightGray)
@@ -101,13 +106,11 @@ fun ReviewsList(
                 itemsIndexed(sortedEvents) { _, event ->
 
                     val reviews = remember { mutableStateOf<List<Review>?>(emptyList()) }
+                    val context = LocalContext.current
 
                     LaunchedEffect(key1 = event.founderUUID) {
-                        reviews.value = ReviewsViewModel.getReviewsForEventAndFounder(event.uuid, founderUUID)
+                        reviews.value = ReviewsViewModel.getReviewsForEventAndFounder(context, event.uuid, founderUUID)
                     }
-//                    Log.d("USER ID", founderUUID)
-//                    Log.d("EVENT", event.toString())
-//                    Log.d("REVIEWS", reviews.value.toString())
 
                     if (reviews.value!!.isNotEmpty()) {
                         EventAndReviews(
@@ -170,20 +173,17 @@ fun ReviewComponent(
     modifier: Modifier = Modifier
 ) {
     val writer = remember { mutableStateOf<User?>(null) }
+    val context = LocalContext.current
 
-    // Fetch the writer's information based on the review's writer UUID
     LaunchedEffect(key1 = review.writerUUID) {
-        writer.value = ReviewsViewModel.getUserByUUID(review.writerUUID)
+        writer.value = ReviewsViewModel.getUserByUUID(context, review.writerUUID)
     }
 
-    // Main container for the review component
     Column(modifier = modifier.padding(16.dp)) {
-        // User profile section
         UserProfile(user = writer.value, navController = navController)
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Review text section
         ReviewText(text = review.reviewText)
     }
 }

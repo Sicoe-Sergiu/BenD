@@ -20,9 +20,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class SearchViewModel : ViewModel(){
+class SearchViewModel : ViewModel() {
 
-    val TAG = "SearchViewModel: "
+    val TAG = SearchViewModel::class.simpleName
+
     private val userCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("user")
     private val artistsCollection: CollectionReference =
@@ -31,10 +32,6 @@ class SearchViewModel : ViewModel(){
         FirebaseFirestore.getInstance().collection("event_founder")
     private val eventsCollection: CollectionReference =
         FirebaseFirestore.getInstance().collection("event")
-    private val eventArtistCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("event_artist")
-    private val userEventCollection: CollectionReference =
-        FirebaseFirestore.getInstance().collection("user_event")
 
     var events: LiveData<List<Event>> = MutableLiveData(emptyList())
     var founders: LiveData<List<EventFounder>> = MutableLiveData(emptyList())
@@ -49,9 +46,12 @@ class SearchViewModel : ViewModel(){
     var _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
+    val errorMessages: LiveData<String> = MutableLiveData()
+
     init {
         fetchData()
     }
+
     fun search(queryString: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -64,12 +64,12 @@ class SearchViewModel : ViewModel(){
             )
 
             updateLiveData()
-
             filterResults(queryString)
 
             _isLoading.value = false
         }
     }
+
     private fun filterResults(queryString: String) {
         _isLoading.value = true
         val currentArtists = artists.value ?: emptyList()
@@ -105,7 +105,10 @@ class SearchViewModel : ViewModel(){
                     it.lastName.contains(queryString, ignoreCase = true)
         }
 
-        Log.d("SearchResults", "Artists found: ${matchedArtists.size}, Events found: ${matchedEvents.size}, Founders found: ${matchedFounders.size}, Users found: ${matchedUsers.size}")
+        Log.d(
+            "SearchResults",
+            "Artists found: ${matchedArtists.size}, Events found: ${matchedEvents.size}, Founders found: ${matchedFounders.size}, Users found: ${matchedUsers.size}"
+        )
         (founders as MutableLiveData).postValue(matchedFounders)
         (events as MutableLiveData).postValue(matchedEvents)
         (artists as MutableLiveData).postValue(matchedArtists)
@@ -113,6 +116,7 @@ class SearchViewModel : ViewModel(){
 
         _isLoading.value = false
     }
+
     private fun fetchData() {
         viewModelScope.launch(Dispatchers.IO) {
             fetchArtistsDeferred = async { fetchArtists() }
@@ -121,6 +125,7 @@ class SearchViewModel : ViewModel(){
             fetchUsersDeferred = async { fetchUsers() }
         }
     }
+
     private fun updateLiveData() {
         if ((artists.value.isNullOrEmpty())) {
             (artists as MutableLiveData).value = fetchArtistsDeferred.getCompleted()
@@ -134,15 +139,20 @@ class SearchViewModel : ViewModel(){
         try {
             return eventsCollection.get().await().toObjects(Event::class.java)
         } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching events: $exception")
+            val errorMessage = "Error fetching events: ${exception.localizedMessage}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
         }
         return emptyList()
     }
+
     private suspend fun fetchArtists(): List<Artist> {
         try {
             return artistsCollection.get().await().toObjects(Artist::class.java)
         } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching artists: $exception")
+            val errorMessage = "Error fetching artists: ${exception.localizedMessage}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
         }
         return emptyList()
     }
@@ -151,18 +161,30 @@ class SearchViewModel : ViewModel(){
         try {
             return eventFounderCollection.get().await().toObjects(EventFounder::class.java)
         } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching founders: $exception")
+            val errorMessage = "Error fetching founders: ${exception.localizedMessage}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
         }
         return emptyList()
-
     }
+
     private suspend fun fetchUsers(): List<User> {
         try {
             return userCollection.get().await().toObjects(User::class.java)
         } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching users: $exception")
+            val errorMessage = "Error fetching users: ${exception.localizedMessage}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
         }
         return emptyList()
+    }
 
+
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
+    }
+
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
     }
 }

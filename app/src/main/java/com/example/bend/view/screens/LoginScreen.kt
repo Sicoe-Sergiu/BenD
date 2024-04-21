@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,9 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -35,6 +39,21 @@ fun LoginScreen(
     navController:NavController,
     loginViewModel: LoginViewModel = viewModel()
 ) {
+
+    val context = LocalContext.current
+    val errorMessage = loginViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                loginViewModel.clearError()
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
@@ -56,14 +75,14 @@ fun LoginScreen(
                     onTextSelected = {
                         loginViewModel.onEvent(LoginUIEvent.EmailChanged(it))
                     },
-                    errorStatus = loginViewModel.login_ui_state.value.email_error
+                    errorStatus = loginViewModel.loginUiState.value.emailError
                 )
                 MyPasswordFieldComponent(
                     labelValue = "Password",
                     onTextSelected = {
                         loginViewModel.onEvent(LoginUIEvent.PasswordChanged(it))
                     },
-                    errorStatus = loginViewModel.login_ui_state.value.password_error
+                    errorStatus = loginViewModel.loginUiState.value.passwordError
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 ClickableLoginRegisterText(
@@ -81,7 +100,7 @@ fun LoginScreen(
                     onButtonClicked = {
                                       loginViewModel.onEvent(LoginUIEvent.LoginButtonClicked(navController))
                     },
-                    isEnabled = loginViewModel.password_validations_passed.value && loginViewModel.email_validation_passed.value
+                    isEnabled = loginViewModel.passwordValidationsPassed.value && loginViewModel.emailValidationPassed.value
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 ClickableLoginRegisterText(
@@ -94,7 +113,7 @@ fun LoginScreen(
 
             }
         }
-        if(loginViewModel.sign_in_in_progress.value)
+        if(loginViewModel.signInInProgress.value)
             CircularProgressIndicator()
     }
 }

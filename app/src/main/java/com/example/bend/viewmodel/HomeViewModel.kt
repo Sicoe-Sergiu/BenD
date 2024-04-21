@@ -1,13 +1,21 @@
 package com.example.bend.viewmodel
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.bend.Constants
 import com.example.bend.model.Artist
@@ -20,6 +28,7 @@ import com.example.bend.model.User
 import com.example.bend.model.UserEvent
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -32,9 +41,12 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    private val appContext: Context?,
+) : ViewModel() {
 
-    private val TAG = "HOME VIEW MODEL"
+    private val TAG = HomeViewModel::class.simpleName
+
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
 
@@ -57,8 +69,9 @@ class HomeViewModel : ViewModel() {
     var artists: LiveData<List<Artist>> = MutableLiveData(emptyList())
     var founders: LiveData<List<EventFounder>> = MutableLiveData(emptyList())
     var eventArtists: LiveData<List<EventArtist>> = MutableLiveData(emptyList())
-    var eventsAttendees: LiveData<List<Pair<Event, Int>>> = MutableLiveData(emptyList())
+//    var eventsAttendees: LiveData<List<Pair<Event, Int>>> = MutableLiveData(emptyList())
     var accountType: LiveData<String> = MutableLiveData("")
+    var userEvent :LiveData<List<UserEvent>> = MutableLiveData(emptyList())
 
     var homeScreenScrollState: LazyListState by mutableStateOf(LazyListState(0, 0))
 
@@ -67,95 +80,243 @@ class HomeViewModel : ViewModel() {
     var newNotifications: LiveData<List<Notification>> = MutableLiveData(emptyList())
     var notifications: LiveData<List<Notification>> = MutableLiveData(emptyList())
 
+    val errorMessages: LiveData<String> = MutableLiveData()
+    var userEventsInitialized = false
+
     init {
+        (isLoading as MutableLiveData).postValue(true)
         loadEvents()
-    }
-    companion object {
-        suspend fun getAccountType(userUUID: String): String = coroutineScope {
-            try {
-                val artistSnapshotDeferred =
-                    async { FirebaseFirestore.getInstance().collection("artist").document(userUUID).get().await() }
-                val founderSnapshotDeferred =
-                    async { FirebaseFirestore.getInstance().collection("event_founder").document(userUUID).get().await() }
-                val userSnapshotDeferred = async { FirebaseFirestore.getInstance().collection("user").document(userUUID).get().await() }
 
-                val (artistSnapshot, founderSnapshot, userSnapshot) = awaitAll(
-                    artistSnapshotDeferred,
-                    founderSnapshotDeferred,
-                    userSnapshotDeferred
-                )
+        while (!userEventsInitialized){
+            if (events.value!!.isNotEmpty()){
+                userEventCollection
+                    .whereIn("eventUUID", events.value!!.map { it.second.uuid })
+                    .addSnapshotListener { snapshot, exception ->
+                        try {
+                            if (exception != null) {
+                                throw exception
+                            }
+                            if(snapshot != null){
+                                val localUserEvent = snapshot.toObjects(UserEvent::class.java)
+                                (userEvent as MutableLiveData).postValue(localUserEvent)
+                                Log.e("USER EVENT", localUserEvent.toString())
+                                userEventsInitialized = true
+                            }
 
-                return@coroutineScope when {
-                    artistSnapshot.exists() -> "artist"
-                    founderSnapshot.exists() -> "event_founder"
-                    userSnapshot.exists() -> "user"
-                    else -> ""
-                }
-            } catch (e: Exception) {
-                // Handle exceptions (e.g., log, report, or throw)
-                ""
+                        } catch (exception: Exception) {
+                            val errorMessage =
+                                "Error setting up listeners for event attendees: ${exception.localizedMessage ?: "Unknown error"}"
+                            Log.e(TAG, errorMessage, exception)
+                            postError(errorMessage)
+                        }
+                    }
             }
         }
-        suspend fun getEventByUUID(eventUUID: String): Event? {
-            try {
+
+        notificationCollection
+            .whereEqualTo("toUserUUID", currentUser?.uid)
+            .addSnapshotListener { snapshot, exception ->
+                try {
+                    if (exception != null) {
+                        throw exception
+                    }
+
+                    if (snapshot != null) {
+                        val changes = snapshot.documentChanges.toSet()
+
+                        for (change in changes) {
+
+                            if (change.type == DocumentChange.Type.ADDED) {
+                                val notification =
+                                    change.document.toObject(Notification::class.java)
+                                if (!notification.seen) {
+                                    Log.d("CHANGES", change.document.toString())
+
+                                    viewModelScope.launch {
+                                        var userUsername = ""
+
+                                        when (getAccountType(null, notification.fromUserUUID)) {
+                                            "user" -> {
+                                                val user = getUserByUUID(null, notification.fromUserUUID)
+                                                userUsername = user?.username ?: ""
+                                            }
+                                            "event_founder" -> {
+                                                val user = getFounderByUUID(null, notification.fromUserUUID)
+                                                userUsername = user?.username ?: ""
+                                            }
+                                            "artist" -> {
+                                                val user = getArtistByUUID(null, notification.fromUserUUID)
+                                                userUsername = user?.username ?: ""
+                                            }
+                                        }
+
+                                        val formattedText = buildAnnotatedString {
+                                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                                append(userUsername)
+                                            }
+                                            append(" " + notification.text + "\n")
+                                            withStyle(style = SpanStyle(color = Color.Gray)) {
+                                                append(getTimeDifferenceDisplay(notification.timestamp))
+                                            }
+                                        }
+
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(appContext, formattedText, Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+
+                                }
+                            }
+                        }
+
+                        if (!snapshot.isEmpty) {
+                            val localNotifications = snapshot.toObjects(Notification::class.java)
+
+                            (notifications as MutableLiveData).postValue(localNotifications)
+                            (newNotifications as MutableLiveData).postValue(localNotifications.filter { !it.seen })
+
+                            Log.d(TAG, "Notifications updated: $localNotifications")
+                        }
+                    } else {
+                        Log.e(TAG, "No notifications found")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing notifications: $e")
+                    postError("Error processing notifications: ${e.localizedMessage}")
+                }
+            }
+    }
+
+    companion object {
+        suspend fun getAccountType(context: Context? = null, userUUID: String): String =
+            coroutineScope {
+                try {
+                    val artistSnapshotDeferred = async {
+                        FirebaseFirestore.getInstance().collection("artist").document(userUUID)
+                            .get().await()
+                    }
+                    val founderSnapshotDeferred = async {
+                        FirebaseFirestore.getInstance().collection("event_founder")
+                            .document(userUUID).get().await()
+                    }
+                    val userSnapshotDeferred = async {
+                        FirebaseFirestore.getInstance().collection("user").document(userUUID).get()
+                            .await()
+                    }
+
+                    val (artistSnapshot, founderSnapshot, userSnapshot) = awaitAll(
+                        artistSnapshotDeferred,
+                        founderSnapshotDeferred,
+                        userSnapshotDeferred
+                    )
+
+                    return@coroutineScope when {
+                        artistSnapshot.exists() -> "artist"
+                        founderSnapshot.exists() -> "event_founder"
+                        userSnapshot.exists() -> "user"
+                        else -> "unknown"
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        if (context != null) {
+                            Toast.makeText(
+                                context,
+                                "Error getting the account type: ${e.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                    return@coroutineScope "error"
+                }
+            }
+
+        suspend fun getEventByUUID(context: Context?, eventUUID: String): Event? {
+            return try {
                 val task = FirebaseFirestore.getInstance().collection("event")
                     .whereEqualTo("uuid", eventUUID).get().await()
-
                 val events = task.toObjects(Event::class.java)
-                return events.first()
+                events.firstOrNull()
             } catch (e: Exception) {
-                // Handle exceptions
-                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    if (context != null) {
+                        Toast.makeText(
+                            context,
+                            "Failed to fetch event: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                null
             }
-            return null
         }
 
-        suspend fun getUserByUUID(userUUID: String): User? {
-            try {
+        suspend fun getUserByUUID(context: Context?, userUUID: String): User? {
+            return try {
                 val task = FirebaseFirestore.getInstance().collection("user")
                     .whereEqualTo("uuid", userUUID).get().await()
-
                 val users = task.toObjects(User::class.java)
-                return users.first()
+                users.firstOrNull()
             } catch (e: Exception) {
-                // Handle exceptions
-                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    if (context != null) {
+                        Toast.makeText(
+                            context,
+                            "Failed to fetch user: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                null
             }
-            return null
         }
 
-        suspend fun getFounderByUUID(founderUUID: String): EventFounder? {
-            try {
+
+        suspend fun getFounderByUUID(context: Context?, founderUUID: String): EventFounder? {
+            return try {
                 val task = FirebaseFirestore.getInstance().collection("event_founder")
                     .whereEqualTo("uuid", founderUUID).get().await()
-
                 val founders = task.toObjects(EventFounder::class.java)
-                return founders.first()
+                founders.firstOrNull()
             } catch (e: Exception) {
-                // Handle exceptions
-                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    if (context != null) {
+                        Toast.makeText(
+                            context,
+                            "Failed to fetch founder: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                null
             }
-            return null
         }
 
-        suspend fun getArtistByUUID(artistUUID: String): Artist? {
-            try {
+
+        suspend fun getArtistByUUID(context: Context?, artistUUID: String): Artist? {
+            return try {
                 val task = FirebaseFirestore.getInstance().collection("artist")
                     .whereEqualTo("uuid", artistUUID).get().await()
-
                 val artists = task.toObjects(Artist::class.java)
-                return artists.first()
+                artists.firstOrNull()
             } catch (e: Exception) {
-                // Handle exceptions
-                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    if (context != null) {
+                        Toast.makeText(
+                            context,
+                            "Failed to fetch artist: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                null
             }
-            return null
         }
-        suspend fun getEventArtistsFromFirebase(event: Event): List<Artist> {
+
+
+        suspend fun getEventArtistsFromFirebase(context: Context?, event: Event): List<Artist> {
             val db = FirebaseFirestore.getInstance()
             val artists = mutableListOf<Artist>()
-
-            try {
+            return try {
                 val eventArtists = db.collection("event_artist")
                     .whereEqualTo("eventUUID", event.uuid)
                     .get()
@@ -173,34 +334,42 @@ class HomeViewModel : ViewModel() {
 
                     artist?.let { artists.add(it) }
                 }
+                artists
             } catch (e: Exception) {
-                println("Error fetching artists for event: ${event.uuid}, ${e.message}")
+                withContext(Dispatchers.Main) {
+                    if (context != null) {
+                        Toast.makeText(
+                            context,
+                            "Error fetching artists for event: ${e.localizedMessage}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                emptyList()
             }
-
-            return artists
         }
-
 
     }
 
-    fun loadEvents(){
+    fun loadEvents() {
         viewModelScope.launch(Dispatchers.IO) {
             fetchEvents()
         }
     }
+
     private fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
+
             val fetchEventFoundersDeferred = async { fetchEventFounders() }
             val fetchEventArtistsDeferred = async { fetchEventArtists() }
-            val accountTypeDeferred = async { getAccountType(currentUser?.uid.toString()) }
-            val fetchNotificationsDeferred = async { fetchNotifications() }
+            val accountTypeDeferred = async { getAccountType(null, currentUser?.uid.toString()) }
 
             awaitAll(
                 fetchEventFoundersDeferred,
                 fetchEventArtistsDeferred,
                 accountTypeDeferred,
-                fetchNotificationsDeferred
             )
+            (isLoading as MutableLiveData).postValue(false)
 
             withContext(Dispatchers.Main) {
                 (accountType as MutableLiveData).postValue(accountTypeDeferred.await())
@@ -209,25 +378,7 @@ class HomeViewModel : ViewModel() {
             Log.d(TAG, "loading data DONE")
         }
     }
-    private fun fetchNotifications() {
-        val notificationsListener = notificationCollection
-            .whereEqualTo("toUserUUID", currentUser?.uid)
-            .addSnapshotListener { snapshot, exception ->
-                if (exception != null) {
-                    Log.e(TAG, "Error listening for notification changes: $exception")
-                    return@addSnapshotListener
-                }
 
-                if (snapshot != null && !snapshot.isEmpty) {
-                    val localNotifications = snapshot.toObjects(Notification::class.java)
-                    (notifications as MutableLiveData).postValue(localNotifications)
-                    (newNotifications as MutableLiveData).postValue(localNotifications.filter { !it.seen })
-                    Log.d(TAG, "Notifications updated: $localNotifications")
-                } else {
-                    Log.e(TAG, "No notifications found")
-                }
-            }
-    }
 
     private suspend fun fetchEvents() {
         val db = FirebaseFirestore.getInstance()
@@ -244,86 +395,120 @@ class HomeViewModel : ViewModel() {
                         .mapNotNull { it["followedUserUUID"] as? String }
                         .toSet()
                 } catch (e: Exception) {
-                    Log.e("FETCH ERROR", "Error fetching followed UUIDs: $e")
-                    emptySet<String>()
+                    val errorMessage = e.localizedMessage ?: "Failed to fetch followed UUIDs."
+                    Log.e(TAG, "Error fetching followed UUIDs: $errorMessage")
+                    postError("Error fetching followed UUIDs: $errorMessage")
+                    return@withContext emptySet<String>()
                 }
             }
 
             val organizedEvents = mutableListOf<Event>()
             val founderEvents = withContext(Dispatchers.IO) {
                 try {
-                    db.collection("event")
-                        .whereIn("founderUUID", followedUUIDs.toList())
-                        .get()
-                        .await()
-                        .documents
-                        .mapNotNull { it.toObject(Event::class.java) }
+                    if (followedUUIDs.isNotEmpty()) {
+                        db.collection("event")
+                            .whereIn("founderUUID", followedUUIDs.toList())
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { it.toObject(Event::class.java) }
+                    } else {
+                        return@withContext emptyList<Event>()
+                    }
                 } catch (e: Exception) {
-                    Log.e("FETCH ERROR", "Error fetching founder events: $e")
-                    emptyList<Event>()
+                    val errorMessage = e.localizedMessage ?: "Failed to fetch founder events."
+                    Log.e(TAG, "Error fetching founder events: $errorMessage")
+                    postError("Error fetching founder events: $errorMessage")
+                    return@withContext emptyList<Event>()
                 }
             }
             organizedEvents.addAll(founderEvents)
 
             val artistEventUUIDs = withContext(Dispatchers.IO) {
                 try {
-                    db.collection("event_artist")
-                        .whereIn("artistUUID", followedUUIDs.toList())
-                        .get()
-                        .await()
-                        .documents
-                        .mapNotNull { it["eventUUID"] as? String }
-                        .toSet()
+                    if (followedUUIDs.isNotEmpty()) {
+                        db.collection("event_artist")
+                            .whereIn("artistUUID", followedUUIDs.toList())
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { it["eventUUID"] as? String }
+                            .toSet()
+                    } else {
+                        return@withContext emptySet<String>()
+                    }
                 } catch (e: Exception) {
-                    Log.e("FETCH ERROR", "Error fetching artist event UUIDs: $e")
-                    emptySet<String>()
+                    val errorMessage = e.localizedMessage ?: "Failed to fetch artist event UUIDs."
+                    Log.e(TAG, "Error fetching artist event UUIDs: $errorMessage")
+                    postError("Error fetching artist event UUIDs: $errorMessage")
+                    return@withContext emptySet<String>()
                 }
             }
 
             val artistEvents = withContext(Dispatchers.IO) {
                 try {
-                    db.collection("event")
-                        .whereIn(FieldPath.documentId(), artistEventUUIDs.toList())
-                        .get()
-                        .await()
-                        .documents
-                        .mapNotNull { it.toObject(Event::class.java) }
+                    if (artistEventUUIDs.isNotEmpty()) {
+                        db.collection("event")
+                            .whereIn(FieldPath.documentId(), artistEventUUIDs.toList())
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { it.toObject(Event::class.java) }
+                    } else {
+                        return@withContext emptyList<Event>()
+                    }
                 } catch (e: Exception) {
-                    Log.e("FETCH ERROR", "Error fetching artist events: $e")
-                    emptyList<Event>()
+                    val errorMessage = e.localizedMessage ?: "Failed to fetch artist events."
+                    Log.e(TAG, "Error fetching artist events: $errorMessage")
+                    postError("Error fetching artist events: $errorMessage")
+                    return@withContext emptyList<Event>()
                 }
             }
             organizedEvents.addAll(artistEvents.filter { it.uuid !in organizedEvents.map { event -> event.uuid } })
 
             val reposts = withContext(Dispatchers.IO) {
                 try {
-                    db.collection("repost")
-                        .whereIn("userUUID", followedUUIDs.toList())
-                        .get()
-                        .await()
-                        .documents
-                        .mapNotNull { it.toObject(Repost::class.java) }
+                    if (followedUUIDs.isNotEmpty()) {
+                        db.collection("repost")
+                            .whereIn("userUUID", followedUUIDs.toList())
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { it.toObject(Repost::class.java) }
+                    } else {
+                        return@withContext emptyList<Repost>()
+                    }
                 } catch (e: Exception) {
-                    Log.e("FETCH ERROR", "Error fetching reposts: $e")
-                    emptyList<Repost>()
+                    val errorMessage = e.localizedMessage ?: "Failed to fetch reposts."
+                    Log.e(TAG, "Error fetching reposts: $errorMessage")
+                    postError("Error fetching reposts: $errorMessage")
+                    return@withContext emptyList<Repost>()
                 }
             }
 
             val repostedEvents = withContext(Dispatchers.IO) {
                 try {
-                    db.collection("event")
-                        .whereIn("uuid", reposts.map { it.eventUUID })
-                        .get()
-                        .await()
-                        .documents
-                        .mapNotNull { document ->
-                            document.toObject(Event::class.java)?.apply {
-                                creationTimestamp = reposts.associate { it.eventUUID to it.timestamp }[uuid] ?: creationTimestamp
+                    if (reposts.isNotEmpty()) {
+                        db.collection("event")
+                            .whereIn("uuid", reposts.map { it.eventUUID })
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { document ->
+                                document.toObject(Event::class.java)?.apply {
+                                    creationTimestamp =
+                                        reposts.associate { it.eventUUID to it.timestamp }[uuid]
+                                            ?: creationTimestamp
+                                }
                             }
-                        }
+                    } else {
+                        return@withContext emptyList<Event>()
+                    }
                 } catch (e: Exception) {
-                    Log.e("FETCH ERROR", "Error fetching reposted events: $e")
-                    emptyList<Event>()
+                    val errorMessage = e.localizedMessage ?: "Failed to fetch reposted events."
+                    Log.e(TAG, "Error fetching reposted events: $errorMessage")
+                    postError("Error fetching reposted events: $errorMessage")
+                    return@withContext emptyList<Event>()
                 }
             }
 
@@ -331,86 +516,139 @@ class HomeViewModel : ViewModel() {
             val repostedEventsList = repostedEvents.map { event ->
                 Pair(reposts.associate { it.eventUUID to it.userUUID }[event.uuid]!!, event)
             }
-            val sortedEventsList = (eventsPair + repostedEventsList).sortedBy { it.second.creationTimestamp }
+            val sortedEventsList =
+                (eventsPair + repostedEventsList).sortedBy { it.second.creationTimestamp }
 
             withContext(Dispatchers.Main) {
                 (events as MutableLiveData).postValue(sortedEventsList)
                 delay(500)
                 loadData()
             }
-            viewModelScope.launch(Dispatchers.IO) {
-                fetchEventAttendees(sortedEventsList.map { it.second })
-            }
+//            viewModelScope.launch(Dispatchers.IO) {
+//                fetchEventAttendees(sortedEventsList.map { it.second })
+//            }
         } catch (exception: Exception) {
-            Log.e(TAG, "Error in overall event fetching process: $exception")
+            val overallError =
+                exception.localizedMessage ?: "Error in overall event fetching process."
+            Log.e(TAG, "Error in overall event fetching process: $overallError")
+            postError("Error in overall event fetching process: $overallError")
         }
     }
 
-
-
-    private suspend fun fetchEventAttendees(eventsList: List<Event>) {
-        try {
-            val eventTasks = eventsList.map { event ->
-                userEventCollection.whereEqualTo("eventUUID", event.uuid).get().await()
-            }
-
-            val attendees = eventsList.zip(eventTasks.map { it.size() })
-            (eventsAttendees as MutableLiveData).postValue(attendees)
-        } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching attendees", exception)
-        }
-    }
+//    private fun fetchEventAttendees(eventsList: List<Event>) {
+//        try {
+//            eventsList.forEach { event ->
+//                userEventCollection.whereEqualTo("eventUUID", event.uuid)
+//                    .addSnapshotListener { snapshots, exception ->
+//                        if (exception != null) {
+//                            Log.e(TAG, "Error fetching event attendees", exception)
+//                            postError("Error fetching event attendees: ${exception.localizedMessage ?: "Unknown error"}")
+//                            return@addSnapshotListener
+//                        }
+//
+//                        val attendeesCount = snapshots?.size() ?: 0
+//                        updateAttendeesLiveData(event, attendeesCount)
+//                    }
+//            }
+//        } catch (exception: Exception) {
+//            val errorMessage =
+//                "Error setting up listeners for event attendees: ${exception.localizedMessage ?: "Unknown error"}"
+//            Log.e(TAG, errorMessage, exception)
+//            postError(errorMessage)
+//        }
+//    }
+//
+//    private fun updateAttendeesLiveData(event: Event, attendeesCount: Int) {
+//        val currentAttendees = (eventsAttendees.value ?: listOf()).toMutableList()
+//        val index = currentAttendees.indexOfFirst { it.first.uuid == event.uuid }
+//        if (index != -1) {
+//            currentAttendees[index] = currentAttendees[index].first to attendeesCount
+//        } else {
+//            currentAttendees.add(event to attendeesCount)
+//        }
+//        (eventsAttendees as MutableLiveData).postValue(currentAttendees)
+//    }
 
     private suspend fun fetchEventFounders() {
         try {
-            val eventFoundersList =
-                eventFounderCollection.whereIn("uuid", events.value!!.map{ it.second.founderUUID }).get().await().toObjects(EventFounder::class.java)
-            (founders as MutableLiveData).postValue(eventFoundersList)
+            val currentEvents =
+                events.value ?: throw IllegalStateException("Events data not available")
 
+            if (events.value?.isNotEmpty() == true) {
+                val eventFoundersList =
+                    eventFounderCollection.whereIn(
+                        "uuid",
+                        currentEvents.map { it.second.founderUUID })
+                        .get().await().toObjects(EventFounder::class.java)
 
+                withContext(Dispatchers.Main) {
+                    (founders as MutableLiveData).postValue(eventFoundersList)
+                }
+            }
         } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching founders: $exception")
+            val errorMessage =
+                "Error fetching event founders: ${exception.localizedMessage ?: "Unknown error"}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
         }
     }
+
     private suspend fun fetchEventArtists() {
         try {
-            val eventArtistList =
-                eventArtistCollection.whereIn("eventUUID", events.value!!.map{ it.second.uuid }).get().await().toObjects(EventArtist::class.java)
-            (eventArtists as MutableLiveData).postValue(eventArtistList)
-            fetchArtists(eventArtistList.map { it.artistUUID })
-        } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching event artists: $exception")
-        }
-    }
-    private suspend fun fetchArtists(artistsUUIDs: List<String>) {
-        try {
-            val artistsList = artistsCollection
-                .whereIn("uuid", artistsUUIDs)
-                .get().await().toObjects(Artist::class.java)
-            (artists as MutableLiveData).postValue(artistsList)
-        } catch (exception: Exception) {
-            Log.e(TAG, "Error fetching artists: $exception")
-        }
-    }
+            val currentEvents =
+                events.value ?: throw IllegalStateException("Events data not available")
+            if (events.value!!.isNotEmpty()) {
+                val eventArtistList =
+                    eventArtistCollection.whereIn("eventUUID", currentEvents.map { it.second.uuid })
+                        .get().await().toObjects(EventArtist::class.java)
 
-    fun getEventArtists(event: Event): List<Artist> {
-        val eventArtists = eventArtists.value?.filter { it.eventUUID == event.uuid } ?: emptyList()
-        val artistsUUIDS = eventArtists.map { it.artistUUID }
-        return artists.value?.filter { it.uuid in artistsUUIDS } ?: emptyList()
-    }
-
-    private fun updateAttendeesCountForEvent(event: Event, increment: Boolean) {
-        val currentList = eventsAttendees.value.orEmpty()
-        val updatedList = currentList.map {
-            if (it.first.uuid == event.uuid) {
-                Pair(event, if (increment) it.second + 1 else it.second - 1)
-            } else {
-                it
+                withContext(Dispatchers.Main) {
+                    (eventArtists as MutableLiveData).postValue(eventArtistList)
+                }
+                fetchArtists(eventArtistList.map { it.artistUUID })
             }
+        } catch (exception: Exception) {
+            val errorMessage =
+                "Error fetching event artists: ${exception.localizedMessage ?: "Unknown error"}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
         }
-        Log.d(if (increment) "INCREMENT" else "DECREMENT", updatedList.toString())
-        (eventsAttendees as MutableLiveData).postValue(updatedList)
     }
+
+    private suspend fun fetchArtists(artistUUIDs: List<String>) {
+        try {
+            val artistsList = artistsCollection.whereIn("uuid", artistUUIDs).get().await()
+                .toObjects(Artist::class.java)
+            withContext(Dispatchers.Main) {
+                (artists as MutableLiveData).postValue(artistsList)
+            }
+        } catch (exception: Exception) {
+            val errorMessage =
+                "Error fetching artists: ${exception.localizedMessage ?: "Unknown error"}"
+            Log.e(TAG, errorMessage, exception)
+            postError(errorMessage)
+        }
+    }
+
+//    private fun updateAttendeesCountForEvent(event: Event, increment: Boolean) {
+//        try {
+//            val currentList = eventsAttendees.value.orEmpty()
+//            val updatedList = currentList.map {
+//                if (it.first.uuid == event.uuid) {
+//                    Pair(event, if (increment) it.second + 1 else it.second - 1)
+//                } else {
+//                    it
+//                }
+//            }
+//            Log.d(if (increment) "INCREMENT" else "DECREMENT", updatedList.toString())
+//            (eventsAttendees as MutableLiveData).postValue(updatedList)
+//        } catch (exception: Exception) {
+//            val errorMessage =
+//                "Error updating attendees count for event: ${exception.localizedMessage ?: "Unknown error"}"
+//            Log.e(TAG, errorMessage, exception)
+//            postError(errorMessage)
+//        }
+//    }
 
     fun addEventToUserList(event: Event) = viewModelScope.launch {
         try {
@@ -420,12 +658,14 @@ class HomeViewModel : ViewModel() {
                 val userEvent = UserEvent(UUID.randomUUID().toString(), user.uuid, event.uuid)
                 userEventCollection.document(userEvent.uuid).set(userEvent).await()
                 Notifications.notifyAllFollowers(user.uuid, event, Constants.FOLLOWED_USER_ATTEND)
-                updateAttendeesCountForEvent(event, increment = true)
-            }
+//                updateAttendeesCountForEvent(event, increment = true)
+            } ?: throw IllegalStateException("User not found")  // Throw if user is null
             operationCompletedMessage.postValue("Event added to your list.")
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding event to user list: $e")
-            operationCompletedMessage.postValue("Error adding event to user list.")
+            val errorMessage =
+                "Error adding event to user list: ${e.localizedMessage ?: "Unknown error"}"
+            Log.e(TAG, errorMessage, e)
+            operationCompletedMessage.postValue(errorMessage)
         }
     }
 
@@ -435,15 +675,20 @@ class HomeViewModel : ViewModel() {
                 .whereEqualTo("userUUID", currentUser?.uid)
                 .whereEqualTo("eventUUID", event.uuid).get().await()
 
+            if (documents.isEmpty) {
+                throw IllegalStateException("No such event found in user's list")  // Ensuring there's something to delete
+            }
+
             documents.forEach { document ->
                 document.reference.delete().await()
             }
-            updateAttendeesCountForEvent(event, increment = false)
+//            updateAttendeesCountForEvent(event, increment = false)
             operationCompletedMessage.postValue("Event removed from your list.")
         } catch (e: Exception) {
-            Log.e(TAG, "Error removing event from user list: $e")
-            operationCompletedMessage.postValue("Error removing event from user list.")
-
+            val errorMessage =
+                "Error removing event from user list: ${e.localizedMessage ?: "Unknown error"}"
+            Log.e(TAG, errorMessage, e)
+            operationCompletedMessage.postValue(errorMessage)
         }
     }
 
@@ -457,31 +702,43 @@ class HomeViewModel : ViewModel() {
 
             !eventDocuments.isEmpty
         } catch (e: Exception) {
-            // TODO: Handle exception (e.g., log, report, or throw)
+            val errorMessage =
+                "Error checking attendance for event: ${e.localizedMessage ?: "Unknown error"}"
+            Log.e(TAG, errorMessage, e)
+            postError(errorMessage)
             false
         }
     }
 
     fun repostEvent(event: Event) {
-        val repost = Repost(UUID.randomUUID().toString(), currentUser!!.uid, event.uuid, System.currentTimeMillis())
+        val repost = Repost(
+            UUID.randomUUID().toString(),
+            currentUser!!.uid,
+            event.uuid,
+            System.currentTimeMillis()
+        )
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 FirebaseFirestore.getInstance().collection("repost")
                     .document(repost.uuid).set(repost).await()
+
                 Notifications.notifyAllFollowers(
                     userUUID = currentUser.uid,
                     event = event,
                     notificationText = Constants.EVENT_REPOST
-                    )
+                )
+
                 Notifications.notifySingleUser(
                     fromUser = currentUser.uid,
                     toUserUUID = event.founderUUID,
                     event = event,
                     notificationText = Constants.FOUNDER_EVENT_REPOST
                 )
-            }catch (e: Exception){
-                Log.d("Repost error", e.printStackTrace().toString())
+            } catch (e: Exception) {
+                val errorMessage = "Error reposting event: ${e.localizedMessage ?: "Unknown error"}"
+                Log.e(TAG, errorMessage, e)
+                postError(errorMessage)
             }
         }
     }
@@ -499,23 +756,38 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-
     fun seeNotification(notificationUUID: String) {
-
         FirebaseFirestore
             .getInstance()
             .collection("notification")
             .document(notificationUUID)
             .update("seen", true)
             .addOnSuccessListener {
-                // Handle success (optional)
                 println("Notification successfully updated")
             }
             .addOnFailureListener { e ->
-                // Handle failure (optional)
-                e.printStackTrace()
+                val errorMessage =
+                    "Error updating notification: ${e.localizedMessage ?: "Unknown error"}"
+                Log.e(TAG, errorMessage, e)
+                postError(errorMessage)
             }
-
     }
 
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
+    }
+
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
+    }
+}
+
+class HomeViewModelFactory(
+    private val appContext: Context?,
+) : ViewModelProvider.NewInstanceFactory() {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return HomeViewModel(
+            appContext = appContext,
+        ) as T
+    }
 }

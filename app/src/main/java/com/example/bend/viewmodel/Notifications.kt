@@ -1,6 +1,7 @@
 package com.example.bend.viewmodel
 
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.example.bend.Constants
 import com.example.bend.model.Artist
 import com.example.bend.model.Event
@@ -13,8 +14,14 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class Notifications {
-    companion object{
-        suspend fun sendNotification(toUserUUID: String, fromUserUUID: String, text:String, eventUUID: String = "", sensitive :Boolean = false){
+    companion object {
+        suspend fun sendNotification(
+            toUserUUID: String,
+            fromUserUUID: String,
+            text: String,
+            eventUUID: String = "",
+            sensitive: Boolean = false
+        ) {
             try {
                 val notification = Notification(
                     uuid = UUID.randomUUID().toString(),
@@ -23,19 +30,26 @@ class Notifications {
                     toUserUUID = toUserUUID,
                     text = text,
                     timestamp = System.currentTimeMillis(),
-                    sensitive = sensitive,
+                    sensitive = sensitive
                 )
                 FirebaseFirestore.getInstance()
                     .collection("notification")
                     .document(notification.uuid)
                     .set(notification)
                     .await()
-            }catch (e: Exception){
-                Log.d("ADD NOTIFICATION ERROR", e.printStackTrace().toString())
+                Log.d("NotificationSuccess", "Notification sent to: $toUserUUID")
+            } catch (e: Exception) {
+                Log.e("NotificationError", "Failed to send notification: ${e.localizedMessage}", e)
             }
         }
-        suspend fun notifySingleUser(fromUser:String, toUserUUID: String, event: Event, notificationText: String, sensitive: Boolean = false){
 
+        suspend fun notifySingleUser(
+            fromUser: String,
+            toUserUUID: String,
+            event: Event,
+            notificationText: String,
+            sensitive: Boolean = false
+        ) {
             try {
                 sendNotification(
                     toUserUUID = toUserUUID,
@@ -44,43 +58,59 @@ class Notifications {
                     eventUUID = event.uuid,
                     sensitive = sensitive
                 )
+                Log.d(
+                    "NotifySingleUser",
+                    "Notification sent to single user: $toUserUUID for event: ${event.uuid}"
+                )
             } catch (e: Exception) {
-                Log.e("EVENT", "Error notifying user", e)
+                Log.e(
+                    "NotifySingleUserError",
+                    "Error notifying single user: ${e.localizedMessage}",
+                    e
+                )
             }
         }
 
-        suspend fun notifyAllFollowers(userUUID: String, event: Event, notificationText: String){
-
+        suspend fun notifyAllFollowers(userUUID: String, event: Event, notificationText: String) {
             try {
                 val followersSnapshot = FirebaseFirestore.getInstance().collection("followers")
                     .whereEqualTo("followedUserUUID", userUUID)
                     .get().await()
 
-                for (document in followersSnapshot) {
-                    val follow = document.toObject(Followers::class.java)
+                followersSnapshot.documents.forEach { document ->
+                    val follower = document.toObject(Followers::class.java) ?: return@forEach
                     sendNotification(
-                        toUserUUID = follow.userUUID,
-                        fromUserUUID = event.founderUUID,
+                        toUserUUID = follower.userUUID,
+                        fromUserUUID = userUUID,
                         text = notificationText,
                         eventUUID = event.uuid
                     )
                 }
+                Log.d(
+                    "NotifyAllFollowers",
+                    "Notified all followers of user: $userUUID for event: ${event.uuid}"
+                )
             } catch (e: Exception) {
-                Log.e("EVENT", "Error notifying followers", e)
+                Log.e(
+                    "NotifyAllFollowersError",
+                    "Error notifying all followers: ${e.localizedMessage}",
+                    e
+                )
             }
         }
-        suspend fun notifyAllAttendees(event: Event, notificationText: String, sensitive: Boolean = false){
 
+        suspend fun notifyAllAttendees(
+            event: Event,
+            notificationText: String,
+            sensitive: Boolean = false
+        ) {
             try {
-
                 val attendeesSnapshot = FirebaseFirestore.getInstance().collection("user_event")
                     .whereEqualTo("eventUUID", event.uuid)
                     .get().await()
-                Log.e("INSIDE notifyAllAttendees", event.uuid)
-                Log.e("INSIDE notifyAllAttendees", attendeesSnapshot.documents.toString())
 
-                for (document in attendeesSnapshot) {
-                    val attendee = document.toObject(UserEvent::class.java)
+                attendeesSnapshot.documents.forEach { document ->
+                    val attendee = document.toObject(UserEvent::class.java) ?: return@forEach
                     sendNotification(
                         toUserUUID = attendee.userUUID,
                         fromUserUUID = event.founderUUID,
@@ -89,8 +119,13 @@ class Notifications {
                         sensitive = sensitive
                     )
                 }
+                Log.d("NotifyAllAttendees", "All attendees notified for event: ${event.uuid}")
             } catch (e: Exception) {
-                Log.e("EVENT", "Error notifying attendees", e)
+                Log.e(
+                    "NotifyAllAttendeesError",
+                    "Error notifying all attendees: ${e.localizedMessage}",
+                    e
+                )
             }
         }
 
@@ -100,8 +135,8 @@ class Notifications {
                     .whereEqualTo("followedUserUUID", event.founderUUID)
                     .get().await()
 
-                for (document in followersSnapshot) {
-                    val follow = document.toObject(Followers::class.java) ?: continue
+                followersSnapshot.documents.forEach { document ->
+                    val follow = document.toObject(Followers::class.java) ?: return@forEach
                     sendNotification(
                         toUserUUID = follow.userUUID,
                         fromUserUUID = event.founderUUID,
@@ -109,20 +144,25 @@ class Notifications {
                         eventUUID = event.uuid
                     )
                 }
+                Log.d("NotifyNewEvent", "Successfully notified all followers of new event: ${event.uuid}")
             } catch (e: Exception) {
-                Log.e("EVENT", "Error notifying followers", e)
+                Log.e("NotifyNewEventError", "Error notifying followers of new event: ${e.localizedMessage}", e)
             }
         }
 
-        suspend fun notifyFollowersOfEventPerformance(db: FirebaseFirestore, artists: List<Artist>, event: Event) {
+        suspend fun notifyFollowersOfEventPerformance(
+            db: FirebaseFirestore,
+            artists: List<Artist>,
+            event: Event
+        ) {
             artists.forEach { artist ->
                 try {
                     val followersSnapshot = db.collection("followers")
                         .whereEqualTo("followedUserUUID", artist.uuid)
                         .get().await()
 
-                    for (document in followersSnapshot.documents) {
-                        val follower = document.toObject(Followers::class.java) ?: continue
+                    followersSnapshot.documents.forEach { document ->
+                        val follower = document.toObject(Followers::class.java) ?: return@forEach
                         sendNotification(
                             toUserUUID = follower.userUUID,
                             fromUserUUID = artist.uuid,
@@ -130,33 +170,44 @@ class Notifications {
                             eventUUID = event.uuid
                         )
                     }
+                    Log.d("NotifyArtistPerformance", "Successfully notified followers of artist ${artist.uuid} for event: ${event.uuid}")
                 } catch (e: Exception) {
-                    Log.e("EVENT", "Error notifying followers of artist performance", e)
+                    Log.e("NotifyArtistPerformanceError", "Error notifying followers of artist performance: ${artist.uuid}, ${e.localizedMessage}", e)
                 }
             }
         }
 
-        suspend fun notifyArtistsOfEvent(event: Event, notificationText: String, sensitive: Boolean = false) {
+        suspend fun notifyArtistsOfEvent(
+            event: Event,
+            notificationText: String,
+            sensitive: Boolean = false
+        ) {
             try {
                 val artistsSnapshot = FirebaseFirestore.getInstance().collection("event_artist")
                     .whereEqualTo("eventUUID", event.uuid)
                     .get().await()
 
-                for (document in artistsSnapshot) {
-                    val artistEvent = document.toObject(EventArtist::class.java)
-
+                artistsSnapshot.documents.forEach { document ->
+                    val artistEvent = document.toObject(EventArtist::class.java) ?: return@forEach
                     notifySingleUser(
                         toUserUUID = artistEvent.artistUUID,
                         fromUser = event.founderUUID,
-                        notificationText = notificationText,
                         event = event,
+                        notificationText = notificationText,
                         sensitive = sensitive
                     )
                 }
+                Log.d("NotifyArtistsOfEvent", "All artists notified for event: ${event.uuid}")
             } catch (e: Exception) {
-                Log.e("EVENT", "Error notifying followers", e)
+                Log.e(
+                    "NotifyArtistsOfEventError",
+                    "Error notifying artists: ${e.localizedMessage}",
+                    e
+                )
             }
         }
+
+
     }
 
 }

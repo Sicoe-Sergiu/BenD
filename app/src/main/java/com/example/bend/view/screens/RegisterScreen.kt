@@ -1,6 +1,7 @@
 package com.example.bend.view.screens
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bend.model.events.RegistrationUIEvent
@@ -54,6 +56,19 @@ fun RegisterScreen(
     editMode: Boolean = false,
     userUUID: String? = null
 ) {
+    val context = LocalContext.current
+    val errorMessage = registerViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                registerViewModel.clearError()
+            }
+        }
+    }
 
 
     if (editMode) {
@@ -114,8 +129,8 @@ fun RegisterScreenContent(
         LaunchedEffect(key1 = userUUID) {
             registerViewModel.setUser(userUUID!!)
         }
-        registerViewModel.validateEdit()
-        selectedImageUri = Uri.parse(registerViewModel.registration_ui_state.value.photoUri)
+//        registerViewModel.validateEdit()
+        selectedImageUri = Uri.parse(registerViewModel.registrationUiState.value.photoUri)
     }
     val singlePhotoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -131,7 +146,7 @@ fun RegisterScreenContent(
         }
     )
 
-    if (isUserSet || (!editMode && !registerViewModel.sign_up_in_progress.value)) {
+    if (isUserSet || (!editMode && !registerViewModel.signUpInProgress.value)) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -154,7 +169,6 @@ fun RegisterScreenContent(
                     }
 
                     if (editMode) {
-//                        TODO:EDIT IMAGE
                         RoundImage(
                             imageUrl = selectedImageUri.toString(),
                             modifier = Modifier
@@ -178,8 +192,8 @@ fun RegisterScreenContent(
                                 )
                             )
                         },
-                        errorStatus = registerViewModel.registration_ui_state.value.first_name_error,
-                        initialValue = registerViewModel.registration_ui_state.value.first_name
+                        errorStatus = registerViewModel.registrationUiState.value.firstNameError,
+                        initialValue = registerViewModel.registrationUiState.value.firstName
                     )
                     MyTextFieldComponent(
                         labelValue = "Last Name",
@@ -190,8 +204,8 @@ fun RegisterScreenContent(
                                 )
                             )
                         },
-                        errorStatus = registerViewModel.registration_ui_state.value.last_name_error,
-                        initialValue = registerViewModel.registration_ui_state.value.last_name
+                        errorStatus = registerViewModel.registrationUiState.value.lastNameError,
+                        initialValue = registerViewModel.registrationUiState.value.lastName
                     )
                     MyTextFieldComponent(
                         labelValue = "Username",
@@ -202,8 +216,8 @@ fun RegisterScreenContent(
                                 )
                             )
                         },
-                        errorStatus = registerViewModel.registration_ui_state.value.username_error,
-                        initialValue = registerViewModel.registration_ui_state.value.username
+                        errorStatus = registerViewModel.registrationUiState.value.userNameError,
+                        initialValue = registerViewModel.registrationUiState.value.username
                     )
                     if (!editMode) {
                         MyTextFieldComponent(
@@ -215,8 +229,8 @@ fun RegisterScreenContent(
                                     )
                                 )
                             },
-                            errorStatus = registerViewModel.registration_ui_state.value.email_error,
-                            initialValue = registerViewModel.registration_ui_state.value.email
+                            errorStatus = registerViewModel.registrationUiState.value.emailError,
+                            initialValue = registerViewModel.registrationUiState.value.email
                         )
                     }
                     if (!editMode) {
@@ -229,7 +243,7 @@ fun RegisterScreenContent(
                                     )
                                 )
                             },
-                            errorStatus = registerViewModel.registration_ui_state.value.password_error
+                            errorStatus = registerViewModel.registrationUiState.value.passwordError
                         )
                     }
                     if (!editMode) {
@@ -245,7 +259,7 @@ fun RegisterScreenContent(
                             })
                     }
 
-                    if (registerViewModel.registration_ui_state.value.account_type == "Artist account" || userTypeLiveData.value == "artist") {
+                    if (registerViewModel.registrationUiState.value.accountType == "Artist account" || userTypeLiveData.value == "artist") {
                         MyTextFieldComponent(
                             "Stage Name",
                             onTextSelected = {
@@ -255,11 +269,11 @@ fun RegisterScreenContent(
                                     )
                                 )
                             },
-                            errorStatus = registerViewModel.registration_ui_state.value.stage_name_error,
-                            initialValue = registerViewModel.registration_ui_state.value.stage_name
+                            errorStatus = registerViewModel.registrationUiState.value.stageNameError,
+                            initialValue = registerViewModel.registrationUiState.value.stageName
                         )
                     }
-                    if (registerViewModel.registration_ui_state.value.account_type == "Event Organizer account" || userTypeLiveData.value == "event_founder") {
+                    if (registerViewModel.registrationUiState.value.accountType == "Event Organizer account" || userTypeLiveData.value == "event_founder") {
                         MyTextFieldComponent(
                             "Phone",
                             onTextSelected = {
@@ -269,25 +283,12 @@ fun RegisterScreenContent(
                                     )
                                 )
                             },
-                            errorStatus = registerViewModel.registration_ui_state.value.password_error,
-                            initialValue = registerViewModel.registration_ui_state.value.phone
+                            errorStatus = registerViewModel.registrationUiState.value.passwordError,
+                            initialValue = registerViewModel.registrationUiState.value.phone
                         )
                     }
                     if (editMode) {
                         Spacer(modifier = Modifier.height(30.dp))
-//                        Log.d("VALIDATIONS:",
-//                            registerViewModel.userType.value.toString() +
-//                            registerViewModel.photoUriValidationsPassed.value.toString() +
-//                                    registerViewModel.first_name_validations_passed.value.toString() +
-//                                    registerViewModel.last_name_validations_passed.value.toString() +
-//                                    registerViewModel.username_validations_passed.value.toString() +
-//                                    registerViewModel.phone_validations_passed.value.toString() +
-//                                    registerViewModel.stage_name_validations_passed.value.toString()
-//                            )
-//                        Log.d("TRY", ((registerViewModel.userType.value.toString() == "event_founder" && registerViewModel.phone_validations_passed.value) ||
-//                                (registerViewModel.userType.value.toString() == "artist" && registerViewModel.stage_name_validations_passed.value) ||
-//                                registerViewModel.userType.value.toString() == "user"
-//                        ).toString())
                         MyButtonComponent(
                             value = "Save Changes",
                             onButtonClicked = {
@@ -297,16 +298,16 @@ fun RegisterScreenContent(
                                     )
                                 )
                             },
-                            isEnabled =
-                            registerViewModel.photoUriValidationsPassed.value &&
-                                    registerViewModel.first_name_validations_passed.value &&
-                                    registerViewModel.last_name_validations_passed.value &&
-                                    registerViewModel.username_validations_passed.value &&
-                                    (
-                                            (registerViewModel.userType.value.toString() == "event_founder" && registerViewModel.phone_validations_passed.value) ||
-                                                    (registerViewModel.userType.value.toString() == "artist" && registerViewModel.stage_name_validations_passed.value) ||
-                                                    registerViewModel.userType.value.toString() == "user"
-                                            )
+                            isEnabled = true
+//                            registerViewModel.photoUriValidationsPassed.value &&
+//                                    registerViewModel.firstNameValidationsPassed.value &&
+//                                    registerViewModel.lastNameValidationsPassed.value &&
+//                                    registerViewModel.usernameValidationsPassed.value &&
+//                                    (
+//                                            (registerViewModel.userType.value.toString() == "event_founder" && registerViewModel.phoneValidationsPassed.value) ||
+//                                                    (registerViewModel.userType.value.toString() == "artist" && registerViewModel.stageNameValidationsPassed.value) ||
+//                                                    registerViewModel.userType.value.toString() == "user"
+//                                            )
                         )
                     }
 
@@ -323,16 +324,17 @@ fun RegisterScreenContent(
                                     )
                                 )
                             },
-                            isEnabled = registerViewModel.first_name_validations_passed.value &&
-                                    registerViewModel.last_name_validations_passed.value &&
-                                    registerViewModel.username_validations_passed.value &&
-                                    registerViewModel.email_validations_passed.value &&
-                                    registerViewModel.password_validations_passed.value &&
-                                    (
-                                            (registerViewModel.registration_ui_state.value.account_type == "Event Organizer account" && registerViewModel.phone_validations_passed.value) ||
-                                                    (registerViewModel.registration_ui_state.value.account_type == "Artist account" && registerViewModel.stage_name_validations_passed.value) ||
-                                                    registerViewModel.registration_ui_state.value.account_type == "Regular Account"
-                                            )
+                            isEnabled = true
+//                            registerViewModel.firstNameValidationsPassed.value &&
+//                                    registerViewModel.lastNameValidationsPassed.value &&
+//                                    registerViewModel.usernameValidationsPassed.value &&
+//                                    registerViewModel.emailValidationsPassed.value &&
+//                                    registerViewModel.passwordValidationsPassed.value &&
+//                                    (
+//                                            (registerViewModel.registrationUiState.value.accountType == "Event Organizer account" && registerViewModel.phoneValidationsPassed.value) ||
+//                                                    (registerViewModel.registrationUiState.value.accountType == "Artist account" && registerViewModel.stageNameValidationsPassed.value) ||
+//                                                    registerViewModel.registrationUiState.value.accountType == "Regular Account"
+//                                            )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         ClickableLoginRegisterText(

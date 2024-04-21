@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -27,6 +29,7 @@ import com.example.bend.view.components.CustomTopBar
 import com.example.bend.view.components.SmallEventComponent
 import com.example.bend.model.Event
 import com.example.bend.model.EventFounder
+import com.example.bend.viewmodel.HomeViewModel
 import com.example.bend.viewmodel.MyEventsViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.SwipeRefreshState
@@ -41,6 +44,20 @@ fun MyEventsScreen(
 
     val events = viewModel.events.observeAsState()
     var selectedItemIndex by rememberSaveable { mutableStateOf(2) }
+
+    val context = LocalContext.current
+    val errorMessage = viewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                viewModel.clearError()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -129,9 +146,10 @@ fun eventsList(
                 itemsIndexed(events) { _, event ->
 
                     val founder = remember { mutableStateOf<EventFounder?>(null) }
+                    val context = LocalContext.current
 
                     LaunchedEffect(key1 = event.founderUUID) {
-                        founder.value = MyEventsViewModel.getEventFounderByUuid(event.founderUUID)
+                        founder.value = HomeViewModel.getFounderByUUID(context, event.founderUUID)
                     }
 
                     SmallEventComponent(

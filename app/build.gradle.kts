@@ -63,6 +63,8 @@ dependencies {
     implementation("androidx.compose.material3:material3-android:1.2.0-rc01")
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
     implementation("com.google.firebase:firebase-storage:20.3.0")
+    implementation("com.google.firebase:firebase-database-ktx:20.3.1")
+    implementation("com.google.android.material:material:1.11.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

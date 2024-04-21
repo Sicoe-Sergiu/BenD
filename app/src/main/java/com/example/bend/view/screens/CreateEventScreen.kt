@@ -2,7 +2,9 @@ package com.example.bend.view.screens
 
 import com.example.bend.view.components.ArtistsSelectSearchInputText
 import android.annotation.SuppressLint
+import android.app.ProgressDialog.show
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,6 +26,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
@@ -40,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +76,25 @@ fun AddEditEventScreen(
     editMode: Boolean = false,
     eventUUID: String? = null
 ) {
+    val context = LocalContext.current
+    val errorMessage = addEditEventViewModel.errorMessages.observeAsState()
+    val isRefreshing by addEditEventViewModel.isLoading.observeAsState(initial = false)
+    val isLoading = remember {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(errorMessage.value) {
+        isLoading.value = false
+        if (errorMessage.value != "") {
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                addEditEventViewModel.clearError()
+            }
+        }
+    }
+
+
     val artistsLiveData = addEditEventViewModel.artistsLiveData.observeAsState()
     var isUiStatePopulated by remember { mutableStateOf(true) }
 
@@ -80,10 +106,10 @@ fun AddEditEventScreen(
     var posterButtonText = "Add Poster"
     var saveButtonText = "Add Event"
 
-    if (editMode){
+    if (editMode) {
         posterButtonText = "Edit Poster"
         saveButtonText = "Save Changes"
-        LaunchedEffect(key1 = 1){
+        LaunchedEffect(key1 = 1) {
             isUiStatePopulated = false
             addEditEventViewModel.populateUiState(eventUUID = eventUUID)
             selectedImageUri = addEditEventViewModel.createEventUiState.value.posterUri
@@ -137,183 +163,209 @@ fun AddEditEventScreen(
                     .padding(it),
                 contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 28.dp)
 
-                ) {
-                    Column(
+                if (isRefreshing || isLoading.value) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else {
+                    Surface(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(scrollState),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(horizontal = 28.dp)
 
                     ) {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        AddPosterButton(
-                            value = posterButtonText,
-                            onButtonClicked = {
-                                singlePhotoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                            isEnabled = true
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        if (selectedImageUri != null)
-                            Box(
-                                modifier = Modifier
-                                    .size(height = 400.dp, width = 250.dp)
-                                    .shadow(
-                                        10.dp,
-                                        shape = RoundedCornerShape(10.dp),
-                                    )
-                            ) {
-                                AsyncImage(
-                                    model = selectedImageUri,
-                                    contentDescription = "Selected Poster",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(shape = RoundedCornerShape(10.dp))
-                                        .border(
-                                            2.dp,
-                                            Color.LightGray,
-                                            shape = RoundedCornerShape(8.dp)
-                                        ),
-                                    contentScale = ContentScale.FillBounds
-                                )
-                            }
-                        if (selectedImageUri != null)
-                            Spacer(modifier = Modifier.height(20.dp))
-                        MyTextFieldComponent(
-                            labelValue = "Location",
-                            onTextSelected = {
-                                addEditEventViewModel.onEvent(
-                                    CreateEventUIEvent.LocationChanged(
-                                        it
-                                    )
-                                )
-                            },
-                            initialValue = addEditEventViewModel.createEventUiState.value.location,
-                            errorStatus = addEditEventViewModel.createEventUiState.value.locationError
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            MyNumberPickerComponent(
-                                labelValue = "Entrance Fee",
-                                onNumberSelected = {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            AddPosterButton(
+                                value = posterButtonText,
+                                onButtonClicked = {
+                                    singlePhotoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                isEnabled = true
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            if (selectedImageUri != null)
+                                Box(
+                                    modifier = Modifier
+                                        .size(height = 400.dp, width = 250.dp)
+                                        .shadow(
+                                            10.dp,
+                                            shape = RoundedCornerShape(10.dp),
+                                        )
+                                ) {
+                                    AsyncImage(
+                                        model = selectedImageUri,
+                                        contentDescription = "Selected Poster",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(shape = RoundedCornerShape(10.dp))
+                                            .border(
+                                                2.dp,
+                                                Color.LightGray,
+                                                shape = RoundedCornerShape(8.dp)
+                                            ),
+                                        contentScale = ContentScale.FillBounds
+                                    )
+                                }
+                            if (selectedImageUri != null)
+                                Spacer(modifier = Modifier.height(20.dp))
+                            MyTextFieldComponent(
+                                labelValue = "Location",
+                                onTextSelected = {
                                     addEditEventViewModel.onEvent(
-                                        CreateEventUIEvent.EntranceFeeChanged(
+                                        CreateEventUIEvent.LocationChanged(
                                             it
                                         )
                                     )
                                 },
-                                errorStatus = addEditEventViewModel.createEventUiState.value.entranceFeeError,
-                                modifier = Modifier.weight(0.8f),
-                                initialValue = addEditEventViewModel.createEventUiState.value.entranceFee
+                                initialValue = addEditEventViewModel.createEventUiState.value.location,
+                                errorStatus = addEditEventViewModel.createEventUiState.value.locationError
                             )
-                            Text(
-                                text = "RON",
-                                modifier = Modifier
-                                    .weight(0.2f)
-                                    .padding(start = 15.dp),
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                MyNumberPickerComponent(
+                                    labelValue = "Entrance Fee",
+                                    onNumberSelected = {
+                                        addEditEventViewModel.onEvent(
+                                            CreateEventUIEvent.EntranceFeeChanged(
+                                                it
+                                            )
+                                        )
+                                    },
+                                    errorStatus = addEditEventViewModel.createEventUiState.value.entranceFeeError,
+                                    modifier = Modifier.weight(0.8f),
+                                    initialValue = addEditEventViewModel.createEventUiState.value.entranceFee
+                                )
+                                Text(
+                                    text = "RON",
+                                    modifier = Modifier
+                                        .weight(0.2f)
+                                        .padding(start = 15.dp),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            DatePicker(
+                                labelValue = "Start Date",
+                                onTextSelected = {
+                                    addEditEventViewModel.onEvent(
+                                        CreateEventUIEvent.StartDateChanged(
+                                            it
+                                        )
+                                    )
+                                },
+                                errorStatus = addEditEventViewModel.createEventUiState.value.startDateError,
+                                graterThan = LocalDate.now().minusDays(1),
+                                initialValue = addEditEventViewModel.createEventUiState.value.startDate
                             )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            DatePicker(
+                                labelValue = "End Date",
+                                onTextSelected = {
+                                    addEditEventViewModel.onEvent(
+                                        CreateEventUIEvent.EndDateChanged(
+                                            it
+                                        )
+                                    )
+                                },
+                                errorStatus = addEditEventViewModel.createEventUiState.value.endDateError,
+                                graterThan = addEditEventViewModel.createEventUiState.value.startDate,
+                                initialValue = addEditEventViewModel.createEventUiState.value.endDate
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TimePicker(
+                                labelValue = "Start Time",
+                                onTextSelected = {
+                                    addEditEventViewModel.onEvent(
+                                        CreateEventUIEvent.StartTimeChanged(
+                                            it
+                                        )
+                                    )
+                                },
+                                errorStatus = addEditEventViewModel.createEventUiState.value.startTimeError,
+                                initialValue = addEditEventViewModel.createEventUiState.value.startTime
+
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TimePicker(
+                                labelValue = "End Time",
+                                onTextSelected = {
+                                    addEditEventViewModel.onEvent(
+                                        CreateEventUIEvent.EndTimeChanged(
+                                            it
+                                        )
+                                    )
+                                },
+                                errorStatus = addEditEventViewModel.createEventUiState.value.endTimeError,
+                                initialValue = addEditEventViewModel.createEventUiState.value.endTime
+
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            ArtistsSelectSearchInputText(
+                                listOfItems = artists,
+                                modifier = Modifier.fillMaxWidth(),
+                                onArtistsChanged = {
+                                    addEditEventViewModel.onEvent(
+                                        CreateEventUIEvent.ArtistsChanged(
+                                            it
+                                        )
+                                    )
+                                },
+                                enable = true,
+                                placeholder = "Artists...",
+                                colors =
+                                TextFieldDefaults.outlinedTextFieldColors(
+                                    focusedBorderColor = PrimaryText,
+                                    focusedLabelColor = PrimaryText,
+                                    cursorColor = PrimaryText
+                                ),
+                                dropdownItem = { artist ->
+                                    ArtistComponent(
+                                        artist = artist,
+                                        modifier = Modifier.width(230.dp)
+                                    )
+                                },
+                                isError = addEditEventViewModel.createEventUiState.value.artistsError,
+                                selectedItems = addEditEventViewModel.createEventUiState.value.artists
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            MyButtonComponent(
+                                value = saveButtonText,
+                                onButtonClicked = {
+                                    addEditEventViewModel.isLoading.value = true
+                                    isLoading.value = true
+                                    if (editMode) {
+                                        addEditEventViewModel.onEvent(
+                                            CreateEventUIEvent.EditEventButtonClicked(
+                                                navController
+                                            )
+                                        )
+                                    } else {
+                                        addEditEventViewModel.onEvent(
+                                            CreateEventUIEvent.CreateEventButtonClicked(
+                                                navController
+                                            )
+                                        )
+                                    }
+                                },
+                                isEnabled = true
+                            )
+                            Spacer(modifier = Modifier.height(30.dp))
                         }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        DatePicker(
-                            labelValue = "Start Date",
-                            onTextSelected = {
-                                addEditEventViewModel.onEvent(CreateEventUIEvent.StartDateChanged(it))
-                            },
-                            errorStatus = addEditEventViewModel.createEventUiState.value.startDateError,
-                            graterThan = LocalDate.now().minusDays(1),
-                            initialValue = addEditEventViewModel.createEventUiState.value.startDate
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        DatePicker(
-                            labelValue = "End Date",
-                            onTextSelected = {
-                                addEditEventViewModel.onEvent(
-                                    CreateEventUIEvent.EndDateChanged(
-                                        it
-                                    )
-                                )
-                            },
-                            errorStatus = addEditEventViewModel.createEventUiState.value.endDateError,
-                            graterThan = addEditEventViewModel.createEventUiState.value.startDate,
-                            initialValue = addEditEventViewModel.createEventUiState.value.endDate
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        TimePicker(
-                            labelValue = "Start Time",
-                            onTextSelected = {
-                                addEditEventViewModel.onEvent(
-                                    CreateEventUIEvent.StartTimeChanged(
-                                        it
-                                    )
-                                )
-                            },
-                            errorStatus = addEditEventViewModel.createEventUiState.value.startTimeError,
-                            initialValue = addEditEventViewModel.createEventUiState.value.startTime
-
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        TimePicker(
-                            labelValue = "End Time",
-                            onTextSelected = {
-                                addEditEventViewModel.onEvent(
-                                    CreateEventUIEvent.EndTimeChanged(
-                                        it
-                                    )
-                                )
-                            },
-                            errorStatus = addEditEventViewModel.createEventUiState.value.endTimeError,
-                            initialValue = addEditEventViewModel.createEventUiState.value.endTime
-
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        ArtistsSelectSearchInputText(
-                            listOfItems = artists,
-                            modifier = Modifier.fillMaxWidth(),
-                            onArtistsChanged = {
-                                addEditEventViewModel.onEvent(CreateEventUIEvent.ArtistsChanged(it))
-                            },
-                            enable = true,
-                            placeholder = "Artists...",
-                            colors =
-                            TextFieldDefaults.outlinedTextFieldColors(
-                                focusedBorderColor = PrimaryText,
-                                focusedLabelColor = PrimaryText,
-                                cursorColor = PrimaryText
-                            ),
-                            dropdownItem = { artist ->
-                                ArtistComponent(artist = artist, modifier = Modifier.width(230.dp))
-                            },
-                            isError = addEditEventViewModel.createEventUiState.value.artistsError,
-                            selectedItems = addEditEventViewModel.createEventUiState.value.artists
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
-                        MyButtonComponent(
-                            value = saveButtonText,
-                            onButtonClicked = {
-                                if (editMode){
-                                    addEditEventViewModel.onEvent(CreateEventUIEvent.EditEventButtonClicked(navController))
-                                }else{
-                                    addEditEventViewModel.onEvent(CreateEventUIEvent.CreateEventButtonClicked(navController))
-                                }
-                            },
-                            isEnabled = true
-                        )
-                        Spacer(modifier = Modifier.height(30.dp))
                     }
                 }
             }

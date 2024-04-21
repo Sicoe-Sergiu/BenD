@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,6 +55,7 @@ import com.example.bend.model.Event
 import com.example.bend.model.EventFounder
 import com.example.bend.model.User
 import com.example.bend.view.theme.green
+import com.example.bend.viewmodel.HomeViewModel
 import com.example.bend.viewmodel.MyEventsViewModel
 import com.example.bend.viewmodel.SearchViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -66,6 +69,20 @@ fun SearchScreen(
 ) {
 
     var selectedItemIndex by rememberSaveable { mutableStateOf(1) }
+    val context = LocalContext.current
+    val errorMessage = searchViewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                searchViewModel.clearError()
+            }
+        }
+    }
+
 
     Scaffold(
         topBar = {
@@ -317,9 +334,10 @@ fun SimpleEventView(
     navController: NavController,
 ) {
     val founder = remember { mutableStateOf<EventFounder?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(key1 = event.founderUUID) {
-        founder.value = MyEventsViewModel.getEventFounderByUuid(event.founderUUID)
+        founder.value = HomeViewModel.getFounderByUUID(context, event.founderUUID)
     }
 
     Column(

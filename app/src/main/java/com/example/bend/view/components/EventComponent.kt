@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import com.example.bend.Constants
 import com.example.bend.view.theme.green
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun EventComponent(
@@ -71,6 +72,19 @@ fun EventComponent(
     navController: NavController,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val errorMessage = viewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                viewModel.clearError()
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -92,7 +106,12 @@ fun EventComponent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(400.dp)
-                    .shadow(elevation = 9.dp, shape = RoundedCornerShape(10.dp), clip = true, ambientColor = Color.Black)
+                    .shadow(
+                        elevation = 9.dp,
+                        shape = RoundedCornerShape(10.dp),
+                        clip = true,
+                        ambientColor = Color.Black
+                    )
                     .clip(shape = RoundedCornerShape(10.dp))
                     .border(width = 1.dp, green, shape = RoundedCornerShape(10.dp))
             )
@@ -152,7 +171,7 @@ fun FounderProfile(founder: EventFounder?, navController: NavController, modifie
             text = founder?.username ?: "",
             fontWeight = FontWeight.Bold,
             fontSize = 20.sp,
-            modifier = Modifier.width(140.dp),
+            modifier = Modifier.width(120.dp),
             overflow = TextOverflow.Ellipsis,
             maxLines = 1
         )
@@ -313,16 +332,11 @@ fun ActionBarEvent(
     viewModel: HomeViewModel,
     event: Event
 ) {
-    var attend by remember { mutableStateOf(false) }
     var showConfirmationDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
     val operationMessage by viewModel.operationCompletedMessage.observeAsState()
-
-    LaunchedEffect(key1 = event) {
-        attend = viewModel.ifAttend(event)
-    }
 
     LaunchedEffect(operationMessage) {
         operationMessage?.let {
@@ -343,35 +357,41 @@ fun ActionBarEvent(
     }
 
     ActionBarLayout(
-        attend = attend,
-        onAttendClick = {
-            attend = !attend
-            if (attend) {
-                viewModel.addEventToUserList(event)
-            } else {
-                viewModel.removeEventFromUserList(event)
-            }
-        },
-        attendeesCount = viewModel.eventsAttendees.observeAsState().value?.find { it.first == event }?.second
-            ?: 0,
+        event = event,
+        viewModel = viewModel,
         onRepostClick = { showConfirmationDialog = true },
-        enabled = viewModel.accountType.value == "user"
     )
 }
 
 
 @Composable
 fun ActionBarLayout(
-    attend: Boolean,
-    onAttendClick: () -> Unit,
-    attendeesCount: Int,
     onRepostClick: () -> Unit,
-    enabled: Boolean
+    viewModel: HomeViewModel,
+    event: Event
 ) {
+    val userEvent = viewModel.userEvent.observeAsState()
+
+    var attend by remember { mutableStateOf(false) }
+    var enabled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(key1 = event, key2 = userEvent) {
+        attend = userEvent.value?.any {
+            it.userUUID == (FirebaseAuth.getInstance().currentUser?.uid
+                ?: "") && it.eventUUID == event.uuid
+        } == true
+        enabled = viewModel.accountType.value == "user"
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 5.dp, shape = RoundedCornerShape(10.dp), clip = true, ambientColor = Color.Black)
+            .shadow(
+                elevation = 5.dp,
+                shape = RoundedCornerShape(10.dp),
+                clip = true,
+                ambientColor = Color.Black
+            )
 
             .border(1.dp, green, shape = RoundedCornerShape(16.dp))
             .background(color = Color.White, shape = RoundedCornerShape(16.dp)),
@@ -381,9 +401,19 @@ fun ActionBarLayout(
         if (enabled)
             MyIconButton(
                 painter = painterResource(
-                    id = if (attend) R.drawable.attend_checked else R.drawable.attend_uncheckedpng
+                    id = if (userEvent.value?.any {
+                            it.userUUID == (FirebaseAuth.getInstance().currentUser?.uid
+                                ?: "") && it.eventUUID == event.uuid
+                        } == true ) R.drawable.attend_checked else R.drawable.attend_uncheckedpng
                 ),
-                onClick = onAttendClick,
+                onClick = {
+                    attend = !attend
+                    if (attend) {
+                        viewModel.addEventToUserList(event)
+                    } else {
+                        viewModel.removeEventFromUserList(event)
+                    }
+                },
                 enabled = enabled,
                 modifier = Modifier
 
@@ -391,7 +421,7 @@ fun ActionBarLayout(
 
 
         Text(
-            text = "$attendeesCount People Attend",
+            text = "${userEvent.value?.filter { it.eventUUID == event.uuid }?.size} People Attend",
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.CenterVertically),
             maxLines = 1

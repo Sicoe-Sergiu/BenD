@@ -28,10 +28,11 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class AddReviewViewModel : ViewModel() {
-    private val TAG = "ADD REVIEW SCREEN"
+    private val TAG = AddReviewViewModel::class.simpleName
+
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
-    var reviewUiState = mutableStateOf(ReviewUiState())
+    private var reviewUiState = mutableStateOf(ReviewUiState())
 
 
     private val eventsCollection: CollectionReference =
@@ -73,74 +74,89 @@ class AddReviewViewModel : ViewModel() {
             is AddReviewUIEvent.AddReviewButtonClicked -> {
                 navController = review.navController
 
-                addReview(navController)
+                reviewPerformersAndOrganizer(navController)
             }
         }
+    }
+    val errorMessages: LiveData<String> = MutableLiveData()
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
+    }
+
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
     }
 
     private fun updateFounderRating() {
+        try {
+            FirebaseFirestore.getInstance().runTransaction { transaction ->
+                val founderDocRef = eventFounderCollection.document(founder.value!!.uuid)
+                val snapshot = transaction.get(founderDocRef)
 
-        FirebaseFirestore.getInstance().runTransaction { transaction ->
-            val founderDocRef = eventFounderCollection.document(founder.value!!.uuid)
-            val snapshot = transaction.get(founderDocRef)
+                val currentRating = snapshot.getDouble("rating") ?: 0.0
+                val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
 
-            val currentRating = snapshot.getDouble("rating") ?: 0.0
-            val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
+                val newRatingSum = currentRating + (reviewUiState.value.rates.getOrNull(0) ?: 0.0f).toDouble()
+                val newRatingsNumber = currentRatingNumber + 1
 
-            val newRatingSum =
-                currentRating + (reviewUiState.value.rates.getOrNull(0) ?: 0.0f).toDouble()
-            val newRatingsNumber = currentRatingNumber + 1
-
-            transaction.update(founderDocRef, "rating", newRatingSum)
-            transaction.update(founderDocRef, "ratingsNumber", newRatingsNumber)
-        }
-            .addOnSuccessListener {
-                viewModelScope.launch(Dispatchers.IO) {
-                    Notifications.notifySingleUser(
-                        fromUser = currentUser!!.uid,
-                        toUserUUID = founder.value!!.uuid,
-                        event = event.value!!,
-                        notificationText = "You received a new rating: ${String.format("%.2f", reviewUiState.value.rates.getOrNull(0) ?: 0.0f)}"
-                    )
+                transaction.update(founderDocRef, "rating", newRatingSum)
+                transaction.update(founderDocRef, "ratingsNumber", newRatingsNumber)
+            }
+                .addOnSuccessListener {
+                    viewModelScope.launch(Dispatchers.IO) {
+                        Notifications.notifySingleUser(
+                            fromUser = currentUser!!.uid,
+                            toUserUUID = founder.value!!.uuid,
+                            event = event.value!!,
+                            notificationText = "You received a new rating: ${String.format("%.2f", reviewUiState.value.rates.getOrNull(0) ?: 0.0f)}"
+                        )
+                    }
                 }
-                // TODO:Handle success
-            }
-            .addOnFailureListener { e ->
-                // TODO:Handle failure
-            }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Error update Founder Rating: ${e.localizedMessage}")
+                    postError(e.localizedMessage ?: "Unknown error occurred")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error update Founder Rating: ${e.localizedMessage}")
+            postError(e.localizedMessage ?: "Unknown error occurred")
+        }
     }
-
     private fun updateArtistRating(artist: Artist, ratingNo: Int) {
+        try {
+            FirebaseFirestore.getInstance().runTransaction { transaction ->
+                val artistDocRef = artistsCollection.document(artist.uuid)
+                val snapshot = transaction.get(artistDocRef)
 
-        FirebaseFirestore.getInstance().runTransaction { transaction ->
-            val artistDocRef = artistsCollection.document(artist.uuid)
-            val snapshot = transaction.get(artistDocRef)
+                val currentRating = snapshot.getDouble("rating") ?: 0.0
+                val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
 
-            val currentRating = snapshot.getDouble("rating") ?: 0.0
-            val currentRatingNumber = snapshot.getLong("ratingsNumber") ?: 0
+                val newRatingSum = currentRating + (reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f).toDouble()
+                val newRatingsNumber = currentRatingNumber + 1
 
-            val newRatingSum =
-                currentRating + (reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f).toDouble()
-            val newRatingsNumber = currentRatingNumber + 1
-
-            transaction.update(artistDocRef, "rating", newRatingSum)
-            transaction.update(artistDocRef, "ratingsNumber", newRatingsNumber)
-        }
-            .addOnSuccessListener {
-                viewModelScope.launch(Dispatchers.IO) {
-                    Notifications.notifySingleUser(
-                        fromUser = currentUser!!.uid,
-                        toUserUUID = artist.uuid,
-                        event = event.value!!,
-                        notificationText = "You received a new rating: ${String.format("%.2f", reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f)}"
-                    )
+                transaction.update(artistDocRef, "rating", newRatingSum)
+                transaction.update(artistDocRef, "ratingsNumber", newRatingsNumber)
+            }
+                .addOnSuccessListener {
+                    viewModelScope.launch(Dispatchers.IO) {
+                        Notifications.notifySingleUser(
+                            fromUser = currentUser!!.uid,
+                            toUserUUID = artist.uuid,
+                            event = event.value!!,
+                            notificationText = "You received a new rating: ${String.format("%.2f", reviewUiState.value.rates.getOrNull(ratingNo) ?: 0.0f)}"
+                        )
+                    }
                 }
-                // TODO:Handle success
-            }
-            .addOnFailureListener { e ->
-                // TODO:Handle failure
-            }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Error update Artist Rating: ${e.localizedMessage}")
+                    postError(e.localizedMessage ?: "Unknown error occurred")
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error update Artist Rating: ${e.localizedMessage}")
+            postError(e.localizedMessage ?: "Unknown error occurred")
+        }
     }
+
+
 
     private fun addReview(userUUID: String, reviewNo: Int) {
         val review = Review(
@@ -161,14 +177,15 @@ class AddReviewViewModel : ViewModel() {
                         notificationText = "You received a new review: \"${review.reviewText}\""
                     )
                 }
-//                TODO: handle success
+                Log.d(TAG, "Review added successfully with ID: ${it.id}")
             }
-            .addOnFailureListener {
-//                TODO: handle failure
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error adding review", e)
+                postError(e.localizedMessage ?: "Unknown error occurred")
             }
     }
 
-    private fun addReview(navController: NavController) {
+    private fun reviewPerformersAndOrganizer(navController: NavController) {
         updateFounderRating()
         if (reviewUiState.value.reviews[0] != "") {
             addReview(founder.value!!.uuid, 0)
@@ -191,15 +208,15 @@ class AddReviewViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
 
-            val fetchEventDeferred = async { fetchEventByUUID(eventUUID) }
-            val fetchArtistsDeferred = async { fetchEventArtists(eventUUID) }
+            try{
+                fetchEventByUUID(eventUUID)
+                fetchEventArtists(eventUUID)
+                fetchFounderByUUID(event.value!!.founderUUID)
 
-            awaitAll(
-                fetchArtistsDeferred,
-                fetchEventDeferred,
-            )
-            val fetchFounderDeferred = async { fetchFounderByUUID(event.value!!.founderUUID) }
-            fetchFounderDeferred.await()
+            }catch (e:Exception){
+                Log.e(TAG, "ERROR LOAD DATA ADD REV : ${event.value}", e)
+            }
+
 
             _isLoading.value = false
         }
@@ -214,10 +231,12 @@ class AddReviewViewModel : ViewModel() {
             if (events.isNotEmpty()) {
                 (event as MutableLiveData).postValue(events.first())
             } else {
-                Log.e("fetchAndPostEventByUUID", "No events found with UUID: $eventUUID")
+                Log.e(TAG, "No events found with UUID: $eventUUID")
+                postError("No events found with UUID: $eventUUID")
             }
         } catch (e: Exception) {
-            Log.e("fetchAndPostEventByUUID", "Error fetching event by UUID: $eventUUID", e)
+            Log.e(TAG, "Error fetching event by UUID: $eventUUID", e)
+            postError(e.localizedMessage ?: "Error fetching event by UUID: $eventUUID")
         }
     }
 
@@ -230,40 +249,38 @@ class AddReviewViewModel : ViewModel() {
             if (founders.isNotEmpty()) {
                 (founder as MutableLiveData).postValue(founders.first())
             } else {
-                Log.e("fetchAndPostEventFounderByUUID", "No Founder found with UUID: $founderUUID")
+                Log.e(TAG, "No Founder found with UUID: $founderUUID")
+                postError("No Founder found with UUID: $founderUUID")
             }
         } catch (e: Exception) {
-            Log.e(
-                "fetchAndPostEventFounderByUUID",
-                "Error fetching Founder by UUID: $founderUUID",
-                e
-            )
+            Log.e(TAG, "Error fetching Founder by UUID: $founderUUID", e)
+            postError(e.localizedMessage ?: "Error fetching Founder by UUID: $founderUUID")
         }
     }
 
     private suspend fun fetchEventArtists(eventUUID: String) {
-        val _artists: MutableList<Artist> = mutableListOf()
+        val localArtists: MutableList<Artist> = mutableListOf()
         try {
             val task = eventArtistCollection.whereEqualTo("eventUUID", eventUUID).get().await()
 
             val eventArtists = task.toObjects(EventArtist::class.java)
             for (eventArtist in eventArtists) {
                 try {
-                    val task1 =
-                        artistsCollection.whereEqualTo("uuid", eventArtist.artistUUID).get().await()
+                    val task1 = artistsCollection.whereEqualTo("uuid", eventArtist.artistUUID).get().await()
 
-                    _artists.add(task1.toObjects(Artist::class.java).first())
+                    localArtists.add(task1.toObjects(Artist::class.java).first())
 
                 } catch (e: Exception) {
-                    Log.e("fetchEventArtists", "Error fetching artists by UUID: $eventUUID", e)
+                    Log.e(TAG, "Error fetching artists by UUID: ${eventArtist.artistUUID}", e)
+                    postError("Error fetching artists by UUID: ${eventArtist.artistUUID}")
                 }
             }
 
         } catch (e: Exception) {
-            Log.e("fetchEventArtists", "Error fetching eventArtists by UUID: $eventUUID", e)
+            Log.e(TAG, "Error fetching eventArtists by UUID: $eventUUID", e)
+            postError(e.localizedMessage ?: "Error fetching eventArtists by UUID: $eventUUID")
         }
-        (artists as MutableLiveData).postValue(_artists)
+        (artists as MutableLiveData).postValue(localArtists)
     }
-
 
 }

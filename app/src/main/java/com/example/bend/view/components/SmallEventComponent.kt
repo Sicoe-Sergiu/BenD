@@ -1,6 +1,7 @@
 package com.example.bend.view.components
 
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bend.Constants
@@ -43,6 +46,7 @@ import com.example.bend.model.EventFounder
 import com.example.bend.view.theme.LightPrimaryColor
 import com.example.bend.view.theme.LightRed
 import com.example.bend.view.theme.green
+import com.example.bend.viewmodel.HomeViewModel
 import com.example.bend.viewmodel.MyEventsViewModel
 import com.google.firebase.auth.FirebaseAuth
 
@@ -60,6 +64,19 @@ fun SmallEventComponent(
     var accountType by remember { mutableStateOf("") }
     var alreadyReviewed by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val errorMessage = viewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                viewModel.clearError()
+            }
+        }
+    }
 
     if (showConfirmationDialog) {
         ConfirmationDialog(
@@ -76,9 +93,9 @@ fun SmallEventComponent(
         if (removeEventTrigger > 0) {
             viewModel.removeEvent(event)
         }
-        accountType = FirebaseAuth.getInstance().currentUser?.uid?.let { MyEventsViewModel.getAccountType(it)}
+        accountType = FirebaseAuth.getInstance().currentUser?.uid?.let { HomeViewModel.getAccountType(context, it)}
             .toString()
-        alreadyReviewed = MyEventsViewModel.checkReviewExists(event.uuid)
+        alreadyReviewed = MyEventsViewModel.checkReviewExists(context, event.uuid)
         Log.d("ALREADYREV", alreadyReviewed.toString())
     }
 

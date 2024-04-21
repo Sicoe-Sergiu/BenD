@@ -29,23 +29,21 @@ import kotlinx.coroutines.launch
 
 class RegisterViewModel : ViewModel() {
     private val TAG = RegisterViewModel::class.simpleName
-    var registration_ui_state = mutableStateOf(RegistrationUiState())
+    var registrationUiState = mutableStateOf(RegistrationUiState())
 
     private val storage = FirebaseStorage.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
-    private val firebaseAuth = FirebaseAuth.getInstance()
-    private val currentUser = firebaseAuth.currentUser
 
     var photoUriValidationsPassed = mutableStateOf(false)
-    var first_name_validations_passed = mutableStateOf(false)
-    var last_name_validations_passed = mutableStateOf(false)
-    var username_validations_passed = mutableStateOf(false)
-    var email_validations_passed = mutableStateOf(false)
-    var password_validations_passed = mutableStateOf(false)
-    var phone_validations_passed = mutableStateOf(false)
-    var stage_name_validations_passed = mutableStateOf(false)
+    var firstNameValidationsPassed = mutableStateOf(false)
+    var lastNameValidationsPassed = mutableStateOf(false)
+    var usernameValidationsPassed = mutableStateOf(false)
+    var emailValidationsPassed = mutableStateOf(false)
+    var passwordValidationsPassed = mutableStateOf(false)
+    var phoneValidationsPassed = mutableStateOf(false)
+    var stageNameValidationsPassed = mutableStateOf(false)
 
-    var sign_up_in_progress = mutableStateOf(false)
+    var signUpInProgress = mutableStateOf(false)
 
     lateinit var navController: NavController
 
@@ -57,91 +55,98 @@ class RegisterViewModel : ViewModel() {
     var user: LiveData<User> = MutableLiveData(null)
     var userType: LiveData<String> = MutableLiveData(null)
 
+    val errorMessages: LiveData<String> = MutableLiveData()
+
+
     private val _isUserSet = MutableStateFlow(false)
     val isUserSet: StateFlow<Boolean> = _isUserSet.asStateFlow()
     fun onEvent(event: RegistrationUIEvent) {
 
         when (event) {
             is RegistrationUIEvent.FirstNameChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(first_name = event.first_name)
+                registrationUiState.value =
+                    registrationUiState.value.copy(firstName = event.first_name)
                 validateFirstNameDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.LastNameChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(last_name = event.last_name)
+                registrationUiState.value =
+                    registrationUiState.value.copy(lastName = event.last_name)
                 validateLastNameDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.UsernameChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(username = event.username)
+                registrationUiState.value =
+                    registrationUiState.value.copy(username = event.username)
                 validateUsernameDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.EmailChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(email = event.email)
+                registrationUiState.value = registrationUiState.value.copy(email = event.email)
                 validateEmailDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.PasswordChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(password = event.password)
+                registrationUiState.value =
+                    registrationUiState.value.copy(password = event.password)
                 validatePasswordDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.AccountTypeChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(account_type = event.account_type)
+                registrationUiState.value =
+                    registrationUiState.value.copy(accountType = event.account_type)
                 printState()
             }
 
 //            conditionals
             is RegistrationUIEvent.PhoneChanged -> {
-                registration_ui_state.value = registration_ui_state.value.copy(phone = event.phone)
+                registrationUiState.value = registrationUiState.value.copy(phone = event.phone)
                 validatePhoneDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.StageNameChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(stage_name = event.stage_name)
+                registrationUiState.value =
+                    registrationUiState.value.copy(stageName = event.stage_name)
                 validateStageNameDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.ProfilePhotoChanged -> {
-                registration_ui_state.value =
-                    registration_ui_state.value.copy(photoUri = event.photoUri.toString())
+                registrationUiState.value =
+                    registrationUiState.value.copy(photoUri = event.photoUri.toString())
 //                validatePosterDataWithRules()
                 printState()
             }
 
             is RegistrationUIEvent.RegisterButtonClicked -> {
-                validateFirstNameDataWithRules()
-                validateLastNameDataWithRules()
-                validateUsernameDataWithRules()
-                validateEmailDataWithRules()
-                validatePasswordDataWithRules()
-                validatePhoneDataWithRules()
-                validateStageNameDataWithRules()
+                validateFirstNameDataWithRules(finalCheck = true)
+                validateLastNameDataWithRules(finalCheck = true)
+                validateUsernameDataWithRules(finalCheck = true)
+                validateEmailDataWithRules(finalCheck = true)
+                validatePasswordDataWithRules(finalCheck = true)
+
+                if (registrationUiState.value.accountType == "Event Organizer account")
+                    validatePhoneDataWithRules(finalCheck = true)
+
+                if (registrationUiState.value.accountType == "Artist account")
+                    validateStageNameDataWithRules(finalCheck = true)
 
                 navController = event.navController
-                if (first_name_validations_passed.value &&
-                    last_name_validations_passed.value &&
-                    username_validations_passed.value &&
-                    email_validations_passed.value &&
-                    password_validations_passed.value &&
+                if (firstNameValidationsPassed.value &&
+                    lastNameValidationsPassed.value &&
+                    usernameValidationsPassed.value &&
+                    emailValidationsPassed.value &&
+                    passwordValidationsPassed.value &&
                     (
-                            (registration_ui_state.value.account_type == "Event Organizer account" && phone_validations_passed.value) ||
-                                    (registration_ui_state.value.account_type == "Artist account" && stage_name_validations_passed.value) ||
-                                    registration_ui_state.value.account_type == "Regular Account"
+                            (registrationUiState.value.accountType == "Event Organizer account" && phoneValidationsPassed.value) ||
+                                    (registrationUiState.value.accountType == "Artist account" && stageNameValidationsPassed.value) ||
+                                    registrationUiState.value.accountType == "Regular Account"
                             )
                 )
                     signUp(navController)
@@ -163,20 +168,20 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun editProfile(navController: NavController) {
-        val editUserState = registration_ui_state.value
+        val editUserState = registrationUiState.value
         val profilePhotoUUID = editUserState.uuid
 
         val storageRef: StorageReference =
             storage.reference.child("profile_photos/$profilePhotoUUID")
 
-        if (registration_ui_state.value.photoUri.startsWith("http")) {
+        if (registrationUiState.value.photoUri.startsWith("http")) {
             when (userType.value) {
                 "event_founder" -> {
                     val updatedFounder = EventFounder(
                         uuid = editUserState.uuid,
                         username = editUserState.username,
-                        firstName = editUserState.first_name,
-                        lastName = editUserState.last_name,
+                        firstName = editUserState.firstName,
+                        lastName = editUserState.lastName,
                         phone = editUserState.phone,
                         email = editUserState.email,
                         profilePhotoURL = editUserState.photoUri,
@@ -189,12 +194,19 @@ class RegisterViewModel : ViewModel() {
                                 .set(updatedFounder, SetOptions.merge())
                                 .addOnSuccessListener {
                                     viewModelScope.launch(Dispatchers.Main) {
-                                        navController.navigate(Constants.userProfileNavigation(updatedFounder.uuid))
+                                        navController.navigate(
+                                            Constants.userProfileNavigation(
+                                                updatedFounder.uuid
+                                            )
+                                        )
                                     }
                                 }
                             println("Document update successful!")
                         } catch (e: Exception) {
-                            println("Error updating document: $e")
+                            val errorMessage = e.localizedMessage ?: "Error updating document."
+                            Log.e(TAG, errorMessage, e)
+                            e.printStackTrace()
+                            postError(errorMessage)
                         }
                     }
                 }
@@ -203,13 +215,13 @@ class RegisterViewModel : ViewModel() {
                     val updatedArtist = Artist(
                         uuid = editUserState.uuid,
                         username = editUserState.username,
-                        firstName = editUserState.first_name,
-                        lastName = editUserState.last_name,
+                        firstName = editUserState.firstName,
+                        lastName = editUserState.lastName,
                         email = editUserState.email,
                         profilePhotoURL = editUserState.photoUri,
                         rating = founder.value!!.rating,
                         ratingsNumber = founder.value!!.ratingsNumber,
-                        stageName = editUserState.stage_name
+                        stageName = editUserState.stageName
                     )
                     viewModelScope.launch(Dispatchers.IO) {
                         try {
@@ -217,12 +229,19 @@ class RegisterViewModel : ViewModel() {
                                 .set(updatedArtist, SetOptions.merge())
                                 .addOnSuccessListener {
                                     viewModelScope.launch(Dispatchers.Main) {
-                                        navController.navigate(Constants.userProfileNavigation(updatedArtist.uuid))
+                                        navController.navigate(
+                                            Constants.userProfileNavigation(
+                                                updatedArtist.uuid
+                                            )
+                                        )
                                     }
                                 }
                             println("Document update successful!")
                         } catch (e: Exception) {
-                            println("Error updating document: $e")
+                            val errorMessage = e.localizedMessage ?: "Error updating document."
+                            Log.e(TAG, errorMessage, e)
+                            e.printStackTrace()
+                            postError(errorMessage)
                         }
                     }
                 }
@@ -231,8 +250,8 @@ class RegisterViewModel : ViewModel() {
                     val updatedUser = User(
                         uuid = editUserState.uuid,
                         username = editUserState.username,
-                        firstName = editUserState.first_name,
-                        lastName = editUserState.last_name,
+                        firstName = editUserState.firstName,
+                        lastName = editUserState.lastName,
                         email = editUserState.email,
                         profilePhotoURL = editUserState.photoUri,
                     )
@@ -242,18 +261,25 @@ class RegisterViewModel : ViewModel() {
                                 .set(updatedUser, SetOptions.merge())
                                 .addOnSuccessListener {
                                     viewModelScope.launch(Dispatchers.Main) {
-                                        navController.navigate(Constants.userProfileNavigation(updatedUser.uuid))
+                                        navController.navigate(
+                                            Constants.userProfileNavigation(
+                                                updatedUser.uuid
+                                            )
+                                        )
                                     }
                                 }
                             println("Document update successful!")
                         } catch (e: Exception) {
-                            println("Error updating document: $e")
+                            val errorMessage = e.localizedMessage ?: "Error updating document."
+                            Log.e(TAG, errorMessage, e)
+                            e.printStackTrace()
+                            postError(errorMessage)
                         }
                     }
                 }
             }
         } else {
-            registration_ui_state.value.photoUri.let { posterUri ->
+            registrationUiState.value.photoUri.let { posterUri ->
                 storageRef.putFile(Uri.parse(posterUri))
                     .addOnSuccessListener {
                         storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
@@ -262,8 +288,8 @@ class RegisterViewModel : ViewModel() {
                                     val updatedFounder = EventFounder(
                                         uuid = editUserState.uuid,
                                         username = editUserState.username,
-                                        firstName = editUserState.first_name,
-                                        lastName = editUserState.last_name,
+                                        firstName = editUserState.firstName,
+                                        lastName = editUserState.lastName,
                                         phone = editUserState.phone,
                                         email = editUserState.email,
                                         profilePhotoURL = downloadUrl.toString(),
@@ -272,16 +298,25 @@ class RegisterViewModel : ViewModel() {
                                     )
                                     viewModelScope.launch(Dispatchers.IO) {
                                         try {
-                                            firestore.collection("event_founder").document(updatedFounder.uuid)
+                                            firestore.collection("event_founder")
+                                                .document(updatedFounder.uuid)
                                                 .set(updatedFounder, SetOptions.merge())
                                                 .addOnSuccessListener {
                                                     viewModelScope.launch(Dispatchers.Main) {
-                                                        navController.navigate(Constants.userProfileNavigation(updatedFounder.uuid))
+                                                        navController.navigate(
+                                                            Constants.userProfileNavigation(
+                                                                updatedFounder.uuid
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             println("Document update successful!")
                                         } catch (e: Exception) {
-                                            println("Error updating document: $e")
+                                            val errorMessage =
+                                                e.localizedMessage ?: "Error updating document."
+                                            Log.e(TAG, errorMessage, e)
+                                            e.printStackTrace()
+                                            postError(errorMessage)
                                         }
                                     }
                                 }
@@ -290,26 +325,35 @@ class RegisterViewModel : ViewModel() {
                                     val updatedArtist = Artist(
                                         uuid = editUserState.uuid,
                                         username = editUserState.username,
-                                        firstName = editUserState.first_name,
-                                        lastName = editUserState.last_name,
+                                        firstName = editUserState.firstName,
+                                        lastName = editUserState.lastName,
                                         email = editUserState.email,
                                         profilePhotoURL = downloadUrl.toString(),
                                         rating = founder.value!!.rating,
                                         ratingsNumber = founder.value!!.ratingsNumber,
-                                        stageName = editUserState.stage_name
+                                        stageName = editUserState.stageName
                                     )
                                     viewModelScope.launch(Dispatchers.IO) {
                                         try {
-                                            firestore.collection("artist").document(updatedArtist.uuid)
+                                            firestore.collection("artist")
+                                                .document(updatedArtist.uuid)
                                                 .set(updatedArtist, SetOptions.merge())
                                                 .addOnSuccessListener {
                                                     viewModelScope.launch(Dispatchers.Main) {
-                                                        navController.navigate(Constants.userProfileNavigation(updatedArtist.uuid))
+                                                        navController.navigate(
+                                                            Constants.userProfileNavigation(
+                                                                updatedArtist.uuid
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             println("Document update successful!")
                                         } catch (e: Exception) {
-                                            println("Error updating document: $e")
+                                            val errorMessage =
+                                                e.localizedMessage ?: "Error updating document."
+                                            Log.e(TAG, errorMessage, e)
+                                            e.printStackTrace()
+                                            postError(errorMessage)
                                         }
                                     }
                                 }
@@ -318,8 +362,8 @@ class RegisterViewModel : ViewModel() {
                                     val updatedUser = User(
                                         uuid = editUserState.uuid,
                                         username = editUserState.username,
-                                        firstName = editUserState.first_name,
-                                        lastName = editUserState.last_name,
+                                        firstName = editUserState.firstName,
+                                        lastName = editUserState.lastName,
                                         email = editUserState.email,
                                         profilePhotoURL = downloadUrl.toString(),
                                     )
@@ -329,12 +373,20 @@ class RegisterViewModel : ViewModel() {
                                                 .set(updatedUser, SetOptions.merge())
                                                 .addOnSuccessListener {
                                                     viewModelScope.launch(Dispatchers.Main) {
-                                                        navController.navigate(Constants.userProfileNavigation(updatedUser.uuid))
+                                                        navController.navigate(
+                                                            Constants.userProfileNavigation(
+                                                                updatedUser.uuid
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             println("Document update successful!")
                                         } catch (e: Exception) {
-                                            println("Error updating document: $e")
+                                            val errorMessage =
+                                                e.localizedMessage ?: "Error updating document."
+                                            Log.e(TAG, errorMessage, e)
+                                            e.printStackTrace()
+                                            postError(errorMessage)
                                         }
                                     }
                                 }
@@ -342,34 +394,36 @@ class RegisterViewModel : ViewModel() {
                         }
                     }
                     .addOnFailureListener { exception ->
-                        // TODO: Handle unsuccessful upload
-                        Log.e("EVENT", "Error uploading image: $exception")
+                        val errorMessage = exception.localizedMessage ?: "Error uploading image."
+                        Log.e(TAG, errorMessage, exception)
+                        postError(errorMessage)
                     }
             }
         }
     }
 
+
     fun validateEdit() {
-        validatePhotoDataWithRules()
-        validateUsernameDataWithRules()
-        validateFirstNameDataWithRules()
-        validateLastNameDataWithRules()
+        validatePhotoDataWithRules(finalCheck = true)
+        validateUsernameDataWithRules(finalCheck = true)
+        validateFirstNameDataWithRules(finalCheck = true)
+        validateLastNameDataWithRules(finalCheck = true)
         if (userType.value == "event_founder") {
-            validatePhoneDataWithRules()
+            validatePhoneDataWithRules(finalCheck = true)
         }
         if (userType.value == "artist") {
-            validateStageNameDataWithRules()
+            validateStageNameDataWithRules(finalCheck = true)
         }
     }
 
     private fun checkEditErrors(): Boolean {
         return (
                 photoUriValidationsPassed.value &&
-                        username_validations_passed.value &&
-                        first_name_validations_passed.value &&
-                        last_name_validations_passed.value &&
-                        ((userType.value == "event_founder" && phone_validations_passed.value) ||
-                                (userType.value == "artist" && stage_name_validations_passed.value) ||
+                        usernameValidationsPassed.value &&
+                        firstNameValidationsPassed.value &&
+                        lastNameValidationsPassed.value &&
+                        ((userType.value == "event_founder" && phoneValidationsPassed.value) ||
+                                (userType.value == "artist" && stageNameValidationsPassed.value) ||
                                 userType.value == "user")
                 )
     }
@@ -380,114 +434,145 @@ class RegisterViewModel : ViewModel() {
         printState()
         createUserInFirebase(
             navController = navController,
-            registration_ui_state = registration_ui_state.value
+            registrationUiState = registrationUiState.value
         )
     }
 
-    private fun validatePhotoDataWithRules() {
-        val result = registration_ui_state.value.photoUri?.let {
+    private fun validatePhotoDataWithRules(finalCheck: Boolean = false) {
+        val result = registrationUiState.value.photoUri?.let {
             RegisterLoginValidator.validatePhoto(
                 uri = Uri.parse(it)
             )
         }
         if (result != null) {
-            registration_ui_state.value = registration_ui_state.value.copy(
+            registrationUiState.value = registrationUiState.value.copy(
                 photoError = result.status
             )
-        }
-        if (result != null) {
             photoUriValidationsPassed.value = result.status
+
+            if (!result.status && finalCheck) {
+                postError("Failed to create user: ${result.message}")
+            }
+        } else {
+            if (finalCheck)
+                postError("Failed to save photo: Photo is not provided.")
         }
     }
 
-    private fun validateFirstNameDataWithRules() {
-        val result = RegisterLoginValidator.validateFirstName(
-            first_name = registration_ui_state.value.first_name
+    private fun validateFirstNameDataWithRules(finalCheck: Boolean = false) {
+        val firstName = registrationUiState.value.firstName
+        val result = RegisterLoginValidator.validateFirstName(firstName)
+
+        registrationUiState.value = registrationUiState.value.copy(
+            firstNameError = result.status
         )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            first_name_error = result.status
-        )
-        first_name_validations_passed.value = result.status
+        firstNameValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate first name: ${result.message}")
+        }
     }
 
-    private fun validateLastNameDataWithRules() {
-        val result = RegisterLoginValidator.validateLastName(
-            last_name = registration_ui_state.value.last_name
+    private fun validateLastNameDataWithRules(finalCheck: Boolean = false) {
+        val lastName = registrationUiState.value.lastName
+        val result = RegisterLoginValidator.validateLastName(lastName)
+
+        registrationUiState.value = registrationUiState.value.copy(
+            lastNameError = result.status
         )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            last_name_error = result.status
-        )
-        last_name_validations_passed.value = result.status
+        lastNameValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate last name: ${result.message}")
+        }
     }
 
-    private fun validateUsernameDataWithRules() {
-        val result = RegisterLoginValidator.validateUsername(
-            username = registration_ui_state.value.username
+    private fun validateUsernameDataWithRules(finalCheck: Boolean = false) {
+        val username = registrationUiState.value.username
+        val result = RegisterLoginValidator.validateUsername(username)
+
+        registrationUiState.value = registrationUiState.value.copy(
+            userNameError = result.status
         )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            username_error = result.status
-        )
-        username_validations_passed.value = result.status
+        usernameValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate username: ${result.message}")
+        }
     }
 
-    private fun validateEmailDataWithRules() {
-        val result = RegisterLoginValidator.validateEmail(
-            email = registration_ui_state.value.email
+    private fun validateStageNameDataWithRules(finalCheck: Boolean = false) {
+        val stageName = registrationUiState.value.stageName
+        val result = RegisterLoginValidator.validateStageName(stageName)
+
+        registrationUiState.value = registrationUiState.value.copy(
+            stageNameError = result.status
         )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            email_error = result.status
-        )
-        email_validations_passed.value = result.status
+        stageNameValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate stage name: ${result.message}")
+        }
     }
 
-    private fun validatePasswordDataWithRules() {
-        val result = RegisterLoginValidator.validatePassword(
-            password = registration_ui_state.value.password
+    private fun validateEmailDataWithRules(finalCheck: Boolean = false) {
+        val email = registrationUiState.value.email
+        val result = RegisterLoginValidator.validateEmail(email)
+
+        registrationUiState.value = registrationUiState.value.copy(
+            emailError = result.status
         )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            password_error = result.status
-        )
-        password_validations_passed.value = result.status
+        emailValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate email: ${result.message}")
+        }
     }
 
-    private fun validatePhoneDataWithRules() {
-        val result = RegisterLoginValidator.validatePhone(
-            phone = registration_ui_state.value.phone
+    private fun validatePasswordDataWithRules(finalCheck: Boolean = false) {
+        val password = registrationUiState.value.password
+        val result = RegisterLoginValidator.validatePassword(password)
+
+        registrationUiState.value = registrationUiState.value.copy(
+            passwordError = result.status
         )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            phone_error = result.status
-        )
-        phone_validations_passed.value = result.status
+        passwordValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate password: ${result.message}")
+        }
     }
 
-    private fun validateStageNameDataWithRules() {
-        val result = RegisterLoginValidator.validateStageName(
-            stage_name = registration_ui_state.value.stage_name
-        )
-        registration_ui_state.value = registration_ui_state.value.copy(
-            stage_name_error = result.status
-        )
-        stage_name_validations_passed.value = result.status
+    private fun validatePhoneDataWithRules(finalCheck: Boolean = false) {
+        val phone = registrationUiState.value.phone
+        val result = RegisterLoginValidator.validatePhone(phone)
 
+        registrationUiState.value = registrationUiState.value.copy(
+            phoneError = result.status
+        )
+        phoneValidationsPassed.value = result.status
+
+        if (!result.status && finalCheck) {
+            postError("Failed to validate phone: ${result.message}")
+        }
     }
 
 
     private fun printState() {
         Log.d(TAG, "Inside_printState")
-        Log.d(TAG, registration_ui_state.toString())
+        Log.d(TAG, registrationUiState.toString())
     }
 
     private fun createUserInFirebase(
         navController: NavController,
-        registration_ui_state: RegistrationUiState
+        registrationUiState: RegistrationUiState
     ) {
-
-        sign_up_in_progress.value = true
+        signUpInProgress.value = true
 
         FirebaseAuth.getInstance()
             .createUserWithEmailAndPassword(
-                registration_ui_state.email,
-                registration_ui_state.password
+                registrationUiState.email,
+                registrationUiState.password
             )
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -495,91 +580,122 @@ class RegisterViewModel : ViewModel() {
                     user?.uid?.let { uid ->
                         val db = FirebaseFirestore.getInstance()
 
-                        if (registration_ui_state.account_type == "Event Organizer account") {
-                            val founder = EventFounder(
-                                uuid = uid,
-                                username = registration_ui_state.username,
-                                firstName = registration_ui_state.first_name,
-                                lastName = registration_ui_state.last_name,
-                                phone = registration_ui_state.phone,
-                                email = registration_ui_state.email,
-                                profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL,
-                                rating = 0f,
-                                ratingsNumber = 0
-                            )
+                        when (registrationUiState.accountType) {
+                            "Event Organizer account" -> {
+                                val founder = EventFounder(
+                                    uuid = uid,
+                                    username = registrationUiState.username,
+                                    firstName = registrationUiState.firstName,
+                                    lastName = registrationUiState.lastName,
+                                    phone = registrationUiState.phone,
+                                    email = registrationUiState.email,
+                                    profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL,
+                                    rating = 0f,
+                                    ratingsNumber = 0
+                                )
 
-                            db.collection("event_founder")
-                                .document(uid)
-                                .set(founder)
-                                .addOnSuccessListener {
-                                    Log.d(TAG, "User added to Firestore successfully")
-                                }
-                                .addOnFailureListener { e ->
-                                    Log.w(TAG, "Error adding user to Firestore", e)
-                                }
-                        } else if (registration_ui_state.account_type == "Artist account") {
-                            val artist = Artist(
-                                uuid = uid,
-                                username = registration_ui_state.username,
-                                email = registration_ui_state.email,
-                                firstName = registration_ui_state.first_name,
-                                lastName = registration_ui_state.last_name,
-                                stageName = registration_ui_state.stage_name,
-                                profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL,
-                                rating = 0f,
-                                ratingsNumber = 0
-                            )
-                            db.collection("artist")
-                                .document(uid)
-                                .set(artist)
-                                .addOnSuccessListener {
-                                    Log.d(TAG, "User added to Firestore successfully")
-                                }
-                                .addOnFailureListener { e ->
-                                    Log.w(TAG, "Error adding user to Firestore", e)
-                                }
-                        } else if (registration_ui_state.account_type == "Regular Account") {
-                            val user = User(
-                                uuid = uid,
-                                username = registration_ui_state.username,
-                                email = registration_ui_state.email,
-                                firstName = registration_ui_state.first_name,
-                                lastName = registration_ui_state.last_name,
-                                profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL
-                            )
-                            db.collection("user")
-                                .document(uid)
-                                .set(user)
-                                .addOnSuccessListener {
-                                    Log.d(TAG, "User added to Firestore successfully")
-                                }
-                                .addOnFailureListener { e ->
-                                    Log.w(TAG, "Error adding user to Firestore", e)
-                                }
+                                db.collection("event_founder")
+                                    .document(uid)
+                                    .set(founder)
+                                    .addOnSuccessListener {
+                                        Log.d(TAG, "User added to Firestore successfully")
+                                        signUpInProgress.value = false
+                                        navController.navigate(Constants.NAVIGATION_SET_PROFILE_PHOTO_PAGE)
+                                    }
+                                    .addOnFailureListener { e ->
+                                        val errorMessage =
+                                            e.localizedMessage ?: "Error adding user to Firestore."
+                                        Log.e(TAG, errorMessage, e)
+                                        postError(errorMessage)
+                                        signUpInProgress.value = false
+                                    }
+                            }
+
+                            "Artist account" -> {
+                                val artist = Artist(
+                                    uuid = uid,
+                                    username = registrationUiState.username,
+                                    email = registrationUiState.email,
+                                    firstName = registrationUiState.firstName,
+                                    lastName = registrationUiState.lastName,
+                                    stageName = registrationUiState.stageName,
+                                    profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL,
+                                    rating = 0f,
+                                    ratingsNumber = 0
+                                )
+                                db.collection("artist")
+                                    .document(uid)
+                                    .set(artist)
+                                    .addOnSuccessListener {
+                                        Log.d(TAG, "User added to Firestore successfully")
+                                        signUpInProgress.value = false
+                                        navController.navigate(Constants.NAVIGATION_SET_PROFILE_PHOTO_PAGE)
+                                    }
+                                    .addOnFailureListener { e ->
+                                        val errorMessage =
+                                            e.localizedMessage ?: "Error adding user to Firestore."
+                                        Log.e(TAG, errorMessage, e)
+                                        postError(errorMessage)
+                                        signUpInProgress.value = false
+                                    }
+                            }
+
+                            "Regular Account" -> {
+                                val user = User(
+                                    uuid = uid,
+                                    username = registrationUiState.username,
+                                    email = registrationUiState.email,
+                                    firstName = registrationUiState.firstName,
+                                    lastName = registrationUiState.lastName,
+                                    profilePhotoURL = Constants.DEFAULT_PROFILE_PHOTO_URL
+                                )
+                                db.collection("user")
+                                    .document(uid)
+                                    .set(user)
+                                    .addOnSuccessListener {
+                                        Log.d(TAG, "User added to Firestore successfully")
+                                        signUpInProgress.value = false
+                                        navController.navigate(Constants.NAVIGATION_SET_PROFILE_PHOTO_PAGE)
+                                    }
+                                    .addOnFailureListener { e ->
+                                        val errorMessage =
+                                            e.localizedMessage ?: "Error adding user to Firestore."
+                                        Log.e(TAG, errorMessage, e)
+                                        postError(errorMessage)
+                                        signUpInProgress.value = false
+                                    }
+                            }
+
+                            else -> {}
                         }
-
-
-                        sign_up_in_progress.value = false
-                        navController.navigate(Constants.NAVIGATION_SET_PROFILE_PHOTO_PAGE)
                     }
+                } else {
+                    val errorMessage = task.exception?.localizedMessage ?: "Unknown error occurred."
+                    Log.e(TAG, errorMessage, task.exception)
+                    postError(errorMessage)
+                    signUpInProgress.value = false
                 }
                 Log.d(TAG, "InCompleteListener")
                 Log.d(TAG, "isSuccessful  = ${task.isSuccessful}")
             }
             .addOnFailureListener { exception ->
+                val errorMessage = exception.localizedMessage ?: "Unknown error occurred."
+                Log.e(TAG, errorMessage, exception)
+                postError(errorMessage)
+                signUpInProgress.value = false
                 Log.d(TAG, "InFailureListener")
                 Log.d(TAG, "Exception = ${exception.message}")
                 Log.d(TAG, "Exception = ${exception.localizedMessage}")
-                sign_up_in_progress.value = false
             }
     }
+
 
     private fun logOutUser(navController: NavController) {
         val firebaseAuth = FirebaseAuth.getInstance()
         firebaseAuth.signOut()
 
-        val authStateListener = AuthStateListener {
-            if (it.currentUser == null) {
+        val authStateListener = AuthStateListener { auth ->
+            if (auth.currentUser == null) {
                 navController.navigate(Constants.NAVIGATION_LOGIN_PAGE)
             }
         }
@@ -601,13 +717,13 @@ class RegisterViewModel : ViewModel() {
                             val localArtist = snapshot.toObject(Artist::class.java)
                             (artist as MutableLiveData).postValue(localArtist)
 
-                            registration_ui_state.value = registration_ui_state.value.copy(
+                            registrationUiState.value = registrationUiState.value.copy(
                                 uuid = localArtist!!.uuid,
-                                first_name = localArtist.firstName,
-                                last_name = localArtist.lastName,
+                                firstName = localArtist.firstName,
+                                lastName = localArtist.lastName,
                                 username = localArtist.username,
                                 email = localArtist.email,
-                                stage_name = localArtist.stageName,
+                                stageName = localArtist.stageName,
                                 photoUri = localArtist.profilePhotoURL
                             )
                             (userType as MutableLiveData).postValue(collectionName)
@@ -617,10 +733,10 @@ class RegisterViewModel : ViewModel() {
                             val localUser = snapshot.toObject(User::class.java)
                             (user as MutableLiveData).postValue(localUser)
 
-                            registration_ui_state.value = registration_ui_state.value.copy(
+                            registrationUiState.value = registrationUiState.value.copy(
                                 uuid = localUser!!.uuid,
-                                first_name = localUser.firstName,
-                                last_name = localUser.lastName,
+                                firstName = localUser.firstName,
+                                lastName = localUser.lastName,
                                 username = localUser.username,
                                 email = localUser.email,
                                 photoUri = localUser.profilePhotoURL
@@ -631,10 +747,10 @@ class RegisterViewModel : ViewModel() {
                         "event_founder" -> {
                             val localFounder = snapshot.toObject(EventFounder::class.java)
                             (founder as MutableLiveData).postValue(localFounder)
-                            registration_ui_state.value = registration_ui_state.value.copy(
+                            registrationUiState.value = registrationUiState.value.copy(
                                 uuid = localFounder!!.uuid,
-                                first_name = localFounder.firstName,
-                                last_name = localFounder.lastName,
+                                firstName = localFounder.firstName,
+                                lastName = localFounder.lastName,
                                 username = localFounder.username,
                                 email = localFounder.email,
                                 phone = localFounder.phone,
@@ -646,10 +762,18 @@ class RegisterViewModel : ViewModel() {
                 }
                 _isUserSet.value = true
             }.addOnFailureListener { exception ->
-                // Log or handle the exception
                 Log.e("Firestore Error", exception.message.toString())
+                postError(exception.localizedMessage ?: "Error Fetching User details.")
             }
         }
 
+    }
+
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
+    }
+
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
     }
 }

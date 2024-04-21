@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,11 +44,8 @@ import com.example.bend.view.components.EventDetails
 import com.example.bend.view.components.EventHeader
 import com.example.bend.view.components.EventPoster
 import com.example.bend.view.components.ExpandIcon
-import com.example.bend.view.theme.PrimaryText
 import com.example.bend.view.theme.green
 import com.example.bend.viewmodel.HomeViewModel
-import okhttp3.internal.notifyAll
-import java.util.UUID
 
 @Composable
 fun EventReposted(
@@ -58,6 +58,19 @@ fun EventReposted(
     whoRepost: String
 ){
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val errorMessage = viewModel.errorMessages.observeAsState()
+
+    LaunchedEffect(errorMessage.value) {
+        if (errorMessage.value != ""){
+            errorMessage.value?.let {
+                Toast.makeText(context, it, Toast.LENGTH_LONG).apply {
+                    show()
+                }
+                viewModel.clearError()
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -122,11 +135,13 @@ fun RepostHeader(
     var userProfilePhoto by remember {mutableStateOf("") }
     var userUsername by remember {mutableStateOf("") }
 
+    val context = LocalContext.current
+
     LaunchedEffect(key1 = userType){
-        userType = HomeViewModel.getAccountType(whoRepost)
+        userType = HomeViewModel.getAccountType(context , whoRepost)
         when(userType){
             "artist" -> {
-                val artist = HomeViewModel.getArtistByUUID(whoRepost)
+                val artist = HomeViewModel.getArtistByUUID(context, whoRepost)
                 if (artist != null) {
                     userUUID = artist.uuid
                     userProfilePhoto = artist.profilePhotoURL
@@ -134,7 +149,7 @@ fun RepostHeader(
                 }
             }
             "user" -> {
-                val user = HomeViewModel.getUserByUUID(whoRepost)
+                val user = HomeViewModel.getUserByUUID(context, whoRepost)
                 if (user != null) {
                     userUUID = user.uuid
                     userProfilePhoto = user.profilePhotoURL
@@ -142,7 +157,7 @@ fun RepostHeader(
                 }
             }
             "event_founder" -> {
-                val founder = HomeViewModel.getFounderByUUID(whoRepost)
+                val founder = HomeViewModel.getFounderByUUID(context, whoRepost)
                 if (founder != null) {
                     userUUID = founder.uuid
                     userProfilePhoto = founder.profilePhotoURL

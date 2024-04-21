@@ -2,6 +2,8 @@ package com.example.bend.viewmodel
 
 import android.net.Uri
 import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.example.bend.Constants
@@ -14,11 +16,13 @@ class ProfilePhotoViewModel : ViewModel() {
     private val storage = FirebaseStorage.getInstance()
     private val firebaseAuth = FirebaseAuth.getInstance()
     private val currentUser = firebaseAuth.currentUser
+    val errorMessages: LiveData<String> = MutableLiveData()
 
     private var photoUri: Uri? = null
     fun setPhoto(uri: Uri?) {
         photoUri = uri
     }
+
 
     fun uploadPhotoToFirebase(navController: NavController) {
         Log.d("LOG URI", photoUri.toString())
@@ -40,6 +44,9 @@ class ProfilePhotoViewModel : ViewModel() {
                             )
                         }
                     }
+                    .addOnFailureListener {e ->
+                        postError(e.localizedMessage ?: "Error uploading photo Firebase Storage")
+                    }
             }
         }
     }
@@ -58,10 +65,8 @@ class ProfilePhotoViewModel : ViewModel() {
 
             documentReference.get().addOnSuccessListener { documentSnapshot ->
                 if (documentSnapshot.exists()) {
-                    // Document exists, proceed with update
                     documentReference.update("profilePhotoURL", newProfilePhotoUrl)
                         .addOnSuccessListener {
-                            // Log success
                             Log.d(
                                 "FirestoreUpdate",
                                 "Document in $collectionName updated successfully"
@@ -69,24 +74,32 @@ class ProfilePhotoViewModel : ViewModel() {
                             navController.navigate(Constants.NAVIGATION_HOME_PAGE)
                         }
                         .addOnFailureListener { e ->
-                            // Log failure
                             Log.e(
                                 "FirestoreUpdate",
                                 "Error updating document in $collectionName",
                                 e
                             )
+                            postError(e.localizedMessage ?: "Error updating document in $collectionName")
                         }
                 } else {
                     Log.d(
                         "FirestoreUpdate",
                         "Document with ID $documentId not found in $collectionName"
                     )
+                    postError("Document with ID $documentId not found in $collectionName")
                 }
             }.addOnFailureListener { e ->
-                // Log failure to get the document
                 Log.e("FirestoreUpdate", "Error getting document from $collectionName", e)
+                postError(e.localizedMessage ?: "Error getting document.")
             }
         }
+    }
+    private fun postError(message: String) {
+        (errorMessages as MutableLiveData).postValue(message)
+    }
+
+    fun clearError() {
+        (errorMessages as MutableLiveData).postValue("")
     }
 
 }
