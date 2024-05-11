@@ -153,7 +153,7 @@ class AddEditEventViewModel : ViewModel() {
             isLoading.value = true
 
             if (createEventUiState.value.posterUri.toString().startsWith("http")) {
-                val updatedEvent = buildUpdatedEvent(
+                val updatedEvent = buildEvent(
                     editEventState,
                     currentUserUID,
                     editEventState.posterUri.toString()
@@ -177,7 +177,7 @@ class AddEditEventViewModel : ViewModel() {
         }
     }
 
-    private fun buildUpdatedEvent(
+    private fun buildEvent(
         editEventState: CreateEventUiState,
         currentUserUID: String,
         posterDownloadLink: String
@@ -226,7 +226,7 @@ class AddEditEventViewModel : ViewModel() {
             .addOnSuccessListener {
                 storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
                     val updatedEvent =
-                        buildUpdatedEvent(editEventState, currentUserUID, downloadUrl.toString())
+                        buildEvent(editEventState, currentUserUID, downloadUrl.toString())
                     updateEventInFirestore(updatedEvent, navController)
                 }.addOnFailureListener { exception ->
                     postError("Failed to get download URL: ${exception.message}")

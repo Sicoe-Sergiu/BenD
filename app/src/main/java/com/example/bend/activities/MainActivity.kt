@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
 
             NavHost(
                 navController = navController,
-                startDestination = Constants.NAVIGATION_HOME_PAGE
+                startDestination = startDestination
             ) {
                 // Screen for signing in
                 composable(Constants.NAVIGATION_LOGIN_PAGE) {

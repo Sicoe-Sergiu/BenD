@@ -19,8 +19,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -163,7 +161,7 @@ class AddReviewViewModel : ViewModel() {
             uuid = UUID.randomUUID().toString(),
             writerUUID = currentUser!!.uid,
             eventUUID = event.value!!.uuid,
-            userUUID = userUUID,
+            reviewedUserUUID = userUUID,
             reviewText = reviewUiState.value.reviews[reviewNo],
             creationTimestamp = System.currentTimeMillis()
         )

@@ -1,6 +1,7 @@
 package com.example.bend.viewmodel
 
 import android.content.Context
+import android.net.ConnectivityManager
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyListState
@@ -69,9 +70,10 @@ class HomeViewModel(
     var artists: LiveData<List<Artist>> = MutableLiveData(emptyList())
     var founders: LiveData<List<EventFounder>> = MutableLiveData(emptyList())
     var eventArtists: LiveData<List<EventArtist>> = MutableLiveData(emptyList())
-//    var eventsAttendees: LiveData<List<Pair<Event, Int>>> = MutableLiveData(emptyList())
+
+    //    var eventsAttendees: LiveData<List<Pair<Event, Int>>> = MutableLiveData(emptyList())
     var accountType: LiveData<String> = MutableLiveData("")
-    var userEvent :LiveData<List<UserEvent>> = MutableLiveData(emptyList())
+    var userEvent: LiveData<List<UserEvent>> = MutableLiveData(emptyList())
 
     var homeScreenScrollState: LazyListState by mutableStateOf(LazyListState(0, 0))
 
@@ -86,33 +88,6 @@ class HomeViewModel(
     init {
         (isLoading as MutableLiveData).postValue(true)
         loadEvents()
-
-        while (!userEventsInitialized){
-            if (events.value!!.isNotEmpty()){
-                userEventCollection
-                    .whereIn("eventUUID", events.value!!.map { it.second.uuid })
-                    .addSnapshotListener { snapshot, exception ->
-                        try {
-                            if (exception != null) {
-                                throw exception
-                            }
-                            if(snapshot != null){
-                                val localUserEvent = snapshot.toObjects(UserEvent::class.java)
-                                (userEvent as MutableLiveData).postValue(localUserEvent)
-                                Log.e("USER EVENT", localUserEvent.toString())
-                                userEventsInitialized = true
-                            }
-
-                        } catch (exception: Exception) {
-                            val errorMessage =
-                                "Error setting up listeners for event attendees: ${exception.localizedMessage ?: "Unknown error"}"
-                            Log.e(TAG, errorMessage, exception)
-                            postError(errorMessage)
-                        }
-                    }
-            }
-        }
-
         notificationCollection
             .whereEqualTo("toUserUUID", currentUser?.uid)
             .addSnapshotListener { snapshot, exception ->
@@ -137,15 +112,22 @@ class HomeViewModel(
 
                                         when (getAccountType(null, notification.fromUserUUID)) {
                                             "user" -> {
-                                                val user = getUserByUUID(null, notification.fromUserUUID)
+                                                val user =
+                                                    getUserByUUID(null, notification.fromUserUUID)
                                                 userUsername = user?.username ?: ""
                                             }
+
                                             "event_founder" -> {
-                                                val user = getFounderByUUID(null, notification.fromUserUUID)
+                                                val user = getFounderByUUID(
+                                                    null,
+                                                    notification.fromUserUUID
+                                                )
                                                 userUsername = user?.username ?: ""
                                             }
+
                                             "artist" -> {
-                                                val user = getArtistByUUID(null, notification.fromUserUUID)
+                                                val user =
+                                                    getArtistByUUID(null, notification.fromUserUUID)
                                                 userUsername = user?.username ?: ""
                                             }
                                         }
@@ -161,7 +143,11 @@ class HomeViewModel(
                                         }
 
                                         withContext(Dispatchers.Main) {
-                                            Toast.makeText(appContext, formattedText, Toast.LENGTH_LONG).show()
+                                            Toast.makeText(
+                                                appContext,
+                                                formattedText,
+                                                Toast.LENGTH_LONG
+                                            ).show()
                                         }
                                     }
 
@@ -353,8 +339,17 @@ class HomeViewModel(
 
     fun loadEvents() {
         viewModelScope.launch(Dispatchers.IO) {
-            fetchEvents()
+            if (appContext?.let { isNetworkAvailable(it) } == true){
+                fetchEvents()
+            }else{
+                postError("You're offline right now. Please check your internet connection and try again.")
+            }
         }
+    }
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetworkInfo
+        return activeNetwork != null && activeNetwork.isConnected
     }
 
     private fun loadData() {
@@ -524,9 +519,31 @@ class HomeViewModel(
                 delay(500)
                 loadData()
             }
-//            viewModelScope.launch(Dispatchers.IO) {
-//                fetchEventAttendees(sortedEventsList.map { it.second })
-//            }
+
+            if(!userEventsInitialized){
+                Log.e("USER EVENT INIT", "111")
+                userEventCollection
+                    .whereIn("eventUUID", sortedEventsList.map { it.second.uuid })
+                    .addSnapshotListener { snapshot, exception ->
+                        try {
+                            if (exception != null) {
+                                throw exception
+                            }
+                            if (snapshot != null) {
+                                val localUserEvent = snapshot.toObjects(UserEvent::class.java)
+                                (userEvent as MutableLiveData).postValue(localUserEvent)
+                                userEventsInitialized = true
+                            }
+
+                        } catch (exception: Exception) {
+                            val errorMessage =
+                                "Error setting up listeners for event attendees: ${exception.localizedMessage ?: "Unknown error"}"
+                            Log.e(TAG, errorMessage, exception)
+                            postError(errorMessage)
+                        }
+                    }
+            }
+
         } catch (exception: Exception) {
             val overallError =
                 exception.localizedMessage ?: "Error in overall event fetching process."
@@ -534,40 +551,6 @@ class HomeViewModel(
             postError("Error in overall event fetching process: $overallError")
         }
     }
-
-//    private fun fetchEventAttendees(eventsList: List<Event>) {
-//        try {
-//            eventsList.forEach { event ->
-//                userEventCollection.whereEqualTo("eventUUID", event.uuid)
-//                    .addSnapshotListener { snapshots, exception ->
-//                        if (exception != null) {
-//                            Log.e(TAG, "Error fetching event attendees", exception)
-//                            postError("Error fetching event attendees: ${exception.localizedMessage ?: "Unknown error"}")
-//                            return@addSnapshotListener
-//                        }
-//
-//                        val attendeesCount = snapshots?.size() ?: 0
-//                        updateAttendeesLiveData(event, attendeesCount)
-//                    }
-//            }
-//        } catch (exception: Exception) {
-//            val errorMessage =
-//                "Error setting up listeners for event attendees: ${exception.localizedMessage ?: "Unknown error"}"
-//            Log.e(TAG, errorMessage, exception)
-//            postError(errorMessage)
-//        }
-//    }
-//
-//    private fun updateAttendeesLiveData(event: Event, attendeesCount: Int) {
-//        val currentAttendees = (eventsAttendees.value ?: listOf()).toMutableList()
-//        val index = currentAttendees.indexOfFirst { it.first.uuid == event.uuid }
-//        if (index != -1) {
-//            currentAttendees[index] = currentAttendees[index].first to attendeesCount
-//        } else {
-//            currentAttendees.add(event to attendeesCount)
-//        }
-//        (eventsAttendees as MutableLiveData).postValue(currentAttendees)
-//    }
 
     private suspend fun fetchEventFounders() {
         try {
@@ -630,25 +613,6 @@ class HomeViewModel(
         }
     }
 
-//    private fun updateAttendeesCountForEvent(event: Event, increment: Boolean) {
-//        try {
-//            val currentList = eventsAttendees.value.orEmpty()
-//            val updatedList = currentList.map {
-//                if (it.first.uuid == event.uuid) {
-//                    Pair(event, if (increment) it.second + 1 else it.second - 1)
-//                } else {
-//                    it
-//                }
-//            }
-//            Log.d(if (increment) "INCREMENT" else "DECREMENT", updatedList.toString())
-//            (eventsAttendees as MutableLiveData).postValue(updatedList)
-//        } catch (exception: Exception) {
-//            val errorMessage =
-//                "Error updating attendees count for event: ${exception.localizedMessage ?: "Unknown error"}"
-//            Log.e(TAG, errorMessage, exception)
-//            postError(errorMessage)
-//        }
-//    }
 
     fun addEventToUserList(event: Event) = viewModelScope.launch {
         try {
@@ -658,8 +622,7 @@ class HomeViewModel(
                 val userEvent = UserEvent(UUID.randomUUID().toString(), user.uuid, event.uuid)
                 userEventCollection.document(userEvent.uuid).set(userEvent).await()
                 Notifications.notifyAllFollowers(user.uuid, event, Constants.FOLLOWED_USER_ATTEND)
-//                updateAttendeesCountForEvent(event, increment = true)
-            } ?: throw IllegalStateException("User not found")  // Throw if user is null
+            } ?: throw IllegalStateException("User not found")
             operationCompletedMessage.postValue("Event added to your list.")
         } catch (e: Exception) {
             val errorMessage =
@@ -676,13 +639,12 @@ class HomeViewModel(
                 .whereEqualTo("eventUUID", event.uuid).get().await()
 
             if (documents.isEmpty) {
-                throw IllegalStateException("No such event found in user's list")  // Ensuring there's something to delete
+                throw IllegalStateException("No such event found in user's list")
             }
 
             documents.forEach { document ->
                 document.reference.delete().await()
             }
-//            updateAttendeesCountForEvent(event, increment = false)
             operationCompletedMessage.postValue("Event removed from your list.")
         } catch (e: Exception) {
             val errorMessage =

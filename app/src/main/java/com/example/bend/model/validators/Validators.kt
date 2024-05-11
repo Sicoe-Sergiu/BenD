@@ -14,22 +14,22 @@ object RegisterLoginValidator {
     }
 
     fun validateFirstName(firstName: String): ValidationResult {
-        if (firstName.isEmpty()) {
-            return ValidationResult(status = false, message = "First name is required.")
-        }
-        if (firstName.length < 4) {
-            return ValidationResult(status = false, message = "First name must be at least 4 characters long.")
-        }
+//        if (firstName.isEmpty()) {
+//            return ValidationResult(status = false, message = "First name is required.")
+//        }
+//        if (firstName.length < 4) {
+//            return ValidationResult(status = false, message = "First name must be at least 4 characters long.")
+//        }
         return ValidationResult(status = true)
     }
 
     fun validateLastName(lastName: String): ValidationResult {
-        if (lastName.isEmpty()) {
-            return ValidationResult(status = false, message = "Last name is required.")
-        }
-        if (lastName.length < 4) {
-            return ValidationResult(status = false, message = "Last name must be at least 4 characters long.")
-        }
+//        if (lastName.isEmpty()) {
+//            return ValidationResult(status = false, message = "Last name is required.")
+//        }
+//        if (lastName.length < 4) {
+//            return ValidationResult(status = false, message = "Last name must be at least 4 characters long.")
+//        }
         return ValidationResult(status = true)
     }
 

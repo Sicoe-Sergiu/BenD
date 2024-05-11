@@ -7,11 +7,6 @@ data class User(
     val lastName: String,
     val email: String,
     val profilePhotoURL:String
-
-//    val followedArtists: List<Artist>,
-//    val followed_organizers: List<EventOrganizer>,
-//    val interests: List<String>,
-//    val favorite_genres: List<String>,
 ){
     constructor() : this("", "", "", "", "","")
 }
