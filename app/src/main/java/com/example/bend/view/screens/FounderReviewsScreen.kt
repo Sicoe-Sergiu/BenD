@@ -1,5 +1,6 @@
 package com.example.bend.view.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -111,8 +112,9 @@ fun ReviewsList(
                     LaunchedEffect(key1 = event.founderUUID) {
                         reviews.value = ReviewsViewModel.getReviewsForEventAndFounder(context, event.uuid, founderUUID)
                     }
-
+                    Log.d("REVIEWSS", reviews.value.toString())
                     if (reviews.value!!.isNotEmpty()) {
+
                         EventAndReviews(
                             event = event,
                             reviews = reviews.value ?: emptyList(),

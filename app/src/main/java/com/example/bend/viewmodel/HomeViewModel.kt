@@ -512,7 +512,7 @@ class HomeViewModel(
                 Pair(reposts.associate { it.eventUUID to it.userUUID }[event.uuid]!!, event)
             }
             val sortedEventsList =
-                (eventsPair + repostedEventsList).sortedBy { it.second.creationTimestamp }
+                (eventsPair + repostedEventsList).sortedByDescending { it.second.creationTimestamp }
 
             withContext(Dispatchers.Main) {
                 (events as MutableLiveData).postValue(sortedEventsList)

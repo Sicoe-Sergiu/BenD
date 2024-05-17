@@ -27,10 +27,12 @@ class ReviewsViewModel: ViewModel(){
     companion object {
         suspend fun getReviewsForEventAndFounder(context: Context?, eventUUID: String, founderUUID: String): List<Review> {
             try {
+                Log.e("params", "$eventUUID $founderUUID")
+
                 val task = FirebaseFirestore.getInstance()
                     .collection("review")
                     .whereEqualTo("eventUUID", eventUUID)
-                    .whereEqualTo("userUUID", founderUUID)
+                    .whereEqualTo("reviewedUserUUID", founderUUID)
                     .get()
                     .await()
                 return task.toObjects(Review::class.java)

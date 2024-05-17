@@ -432,7 +432,7 @@ class RegisterViewModel : ViewModel() {
     private fun signUp(navController: NavController) {
         Log.d(TAG, "Inside_signUp")
         printState()
-        createUserInFirebase(
+        registerUserAndAddToFirebase(
             navController = navController,
             registrationUiState = registrationUiState.value
         )
@@ -563,23 +563,18 @@ class RegisterViewModel : ViewModel() {
         Log.d(TAG, registrationUiState.toString())
     }
 
-    private fun createUserInFirebase(
+    private fun registerUserAndAddToFirebase(
         navController: NavController,
         registrationUiState: RegistrationUiState
     ) {
         signUpInProgress.value = true
-
         FirebaseAuth.getInstance()
-            .createUserWithEmailAndPassword(
-                registrationUiState.email,
-                registrationUiState.password
-            )
+            .createUserWithEmailAndPassword( registrationUiState.email, registrationUiState.password )
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     val user = task.result?.user
                     user?.uid?.let { uid ->
                         val db = FirebaseFirestore.getInstance()
-
                         when (registrationUiState.accountType) {
                             "Event Organizer account" -> {
                                 val founder = EventFounder(
@@ -593,7 +588,6 @@ class RegisterViewModel : ViewModel() {
                                     rating = 0f,
                                     ratingsNumber = 0
                                 )
-
                                 db.collection("event_founder")
                                     .document(uid)
                                     .set(founder)
